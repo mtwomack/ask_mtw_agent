@@ -1,0 +1,32 @@
+# Secrets - never commit
+.env
+**/.env
+*.env
+!.env.example
+*.pem
+*.key
+credentials*.json
+service-account*.json
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local / scratch
+*.bak
+*.log
+dbtest.py
+requirements.txt.bak
+pyproject.toml.*.bak
+uv.lock.*.bak
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
