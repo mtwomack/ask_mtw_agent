@@ -107,12 +107,24 @@ adkweb.cmd --log_level DEBUG
 
 ## Project layout
 
-- `agent.py` defines `root_agent`, selects the Ollama model, and registers the example tools.
-- `services.py` registers the `devmem://`, `devpg://`, and `dbmem://` ADK services and loads local environment configuration.
-- `adkweb.cmd` launches ADK in either in-memory or PostgreSQL mode and sets local proxy bypasses.
-- `dbtest.py` contains a small PostgreSQL connectivity check.
-- `pyproject.toml` declares the package metadata and Python dependencies; `uv.lock` pins the resolved dependency set.
-- `.env.example` documents the environment variables used for local configuration.
+```text
+ask_mtw_agent/
+|-- .adk/                 ADK-generated artifacts and session data
+|-- .env                  Local settings and secrets (create from .env.example)
+|-- .env.example          Environment variable template
+|-- .gitignore            Excludes secrets and generated files
+|-- README.md             Project overview and setup instructions
+|-- __init__.py           Python package initialization
+|-- adkweb.cmd            Windows launcher for ADK web
+|-- agent.py              Agent, Ollama model, and example tools
+|-- dbtest.py             PostgreSQL connectivity check
+|-- pyproject.toml        Project metadata and dependencies
+|-- readme.txt            Original quick-start notes
+|-- services.py           ADK session and memory service registration
+`-- uv.lock               Locked dependency versions
+```
+
+The `.venv/`, `__pycache__/`, and `*.egg-info/` directories are generated locally and are not shown above.
 
 ## Troubleshooting
 
