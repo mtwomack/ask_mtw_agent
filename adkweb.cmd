@@ -7,10 +7,10 @@ REM        adkweb --log_level DEBUG
 cd /d %~dp0
 
 REM Keep local Ollama calls off the corporate proxy
-set HTTP_PROXY=
-set HTTPS_PROXY=
-set http_proxy=
-set https_proxy=
+REM set HTTP_PROXY=
+REM set HTTPS_PROXY=
+REM set http_proxy=
+REM set https_proxy=
 set NO_PROXY=localhost,127.0.0.1
 set no_proxy=localhost,127.0.0.1
 

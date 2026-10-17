@@ -34,6 +34,10 @@ from google.adk.agents import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 
 from google.adk.tools import ToolContext
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+
+# Model comes from .env so you can switch without editing code
+AGENT_MODEL = os.getenv("AGENT_MODEL", "gemini-3.5-flash-lite")
 
 # Mock tool implementations
 def get_current_time(city: str) -> dict:
@@ -50,21 +54,23 @@ def whoami(tool_context: ToolContext) -> dict:
     """Returns the user ID of the current session."""
     return {"user_id": tool_context.user_id}
 
+echo_agent = RemoteA2aAgent(
+    name="echo_agent",
+    description="Public remote test agent that echoes back whatever text it is sent.",
+    agent_card="https://echo-agent.mattiapapaccioli.com/.well-known/agent-card.json",
+)
+
 root_agent = LlmAgent(
-    # model="gemini-2.5-flash",
-    model=LiteLlm(
-        model="ollama_chat/qwen2.5:7b",
-        api_base=os.environ["OLLAMA_API_BASE"],
-        num_ctx=4096,   # raise to 8192 if you have a GPU
-        timeout=120,    # fail with an error instead of hanging forever
-    ),
+    model=AGENT_MODEL,
     name="root_agent",
     description="Tells the current time in a specified city and greets users.",
     instruction=(
         "You are a helpful assistant that tells the current time in cities and greets users. "
-        "Use the 'get_current_time' and 'greet_user' tools as appropriate."
+        "Use the 'get_current_time' and 'greet_user' tools as appropriate. "
+        "If the user asks to echo something or to test the echo agent, transfer to echo_agent."
     ),
     tools=[get_current_time, greet_user, whoami],
+    sub_agents=[echo_agent],
 )
 
 # No Runner here: `adk web` / `adk api_server` build their own from root_agent.

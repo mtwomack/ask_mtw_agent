@@ -20,7 +20,6 @@ __pycache__/
 # Local / scratch
 *.bak
 *.log
-dbtest.py
 requirements.txt.bak
 pyproject.toml.*.bak
 uv.lock.*.bak
