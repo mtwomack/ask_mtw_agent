@@ -37,6 +37,9 @@ app = get_fast_api_app(
     session_service_uri=os.getenv("SESSION_SERVICE_URI", "devpg://"),   # DATABASE_URL in .env / secret
     memory_service_uri=None if os.getenv("MEMORY_SERVICE_URI") == "none"
     else os.getenv("MEMORY_SERVICE_URI", "dbmem://"),
+    # Uploaded documents (and any other artifacts). devmem:// = in memory, kept until restart;
+    # on Cloud Run use gs://<bucket> so uploads survive restarts and multiple instances.
+    artifact_service_uri=os.getenv("ARTIFACT_SERVICE_URI", "devmem://"),
     allow_origins=[o for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o],
     web=os.getenv("WITH_UI", "0") == "1",
 )

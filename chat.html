@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ask MTW</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231f5fbf%22/%3E%3Cpath d=%22M7 22l6-7 5 4 7-9%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231f5fbf%22/%3E%3Ctext x=%2216%22 y=%2220.5%22 text-anchor=%22middle%22 font-family=%22Segoe UI,Arial,Helvetica,sans-serif%22 font-size=%2212%22 font-weight=%22700%22 fill=%22%23fff%22 textLength=%2225%22 lengthAdjust=%22spacingAndGlyphs%22%3EMTW%3C/text%3E%3C/svg%3E">
 <style>
 :root {
   --bg: #f6f5f1; --panel: #ffffff; --side: #efede6; --ink: #17171a; --muted: #6d6b66;
@@ -94,7 +94,7 @@ header {
 #thread { max-width: 860px; margin: 0 auto; padding: 28px 24px 12px; }
 
 .msg { margin: 0 0 22px; display: flex; }
-.msg.user { justify-content: flex-end; }
+.msg.user { flex-direction: column; align-items: flex-end; }
 .msg.user .bubble {
   background: var(--user); color: var(--user-ink); padding: 10px 14px; border-radius: 16px 16px 4px 16px;
   max-width: 78%; white-space: pre-wrap; word-wrap: break-word;
@@ -154,21 +154,55 @@ header {
 #empty p { color: var(--muted); margin: 0 0 28px; }
 #empty .logo { width: 48px; height: 48px; font-size: 15px; border-radius: 12px; margin: 0 auto; }
 .ideas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; text-align: left; }
-.idea { text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
+.idea { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
 .idea:hover { border-color: var(--accent); }
 .idea b { display: block; font-size: 14px; }
 .idea span { color: var(--muted); font-size: 13px; }
+.idea.multi:hover { border-color: var(--line); }
+.idea .acts { display: flex; gap: 6px; margin-top: 8px; }
+.idea .acts button {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--side);
+  border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink);
+}
+.idea .acts button:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- composer ---------- */
 footer { padding: 8px 24px 18px; }
 .composer {
-  max-width: 812px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 8px 8px 16px; box-shadow: var(--shadow);
+  max-width: 812px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px; box-shadow: var(--shadow);
+  transition: border-color .15s, background .15s;
 }
+.composer.drag { border-color: var(--accent); background: var(--accent-soft); }
+#attach {
+  flex: none; width: 36px; height: 36px; border-radius: 10px; border: 0; background: none; color: var(--muted);
+  display: grid; place-items: center;
+}
+#attach:hover { background: rgba(127,127,127,.12); color: var(--ink); }
+#files { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 2px 4px; }
+#files:empty { display: none; }
+.file-err { flex-basis: 100%; color: var(--down); font-size: 12px; padding: 2px 4px; }
+.file-err:empty { display: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 6px 8px 6px 6px;
+  border: 1px solid var(--line); background: var(--side); border-radius: 10px; font-size: 13px; color: var(--ink);
+}
+.chip .ic {
+  flex: none; width: 30px; height: 30px; border-radius: 7px; background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; font-size: 9px; font-weight: 800; letter-spacing: .03em;
+}
+.chip .ic.thumb { background-size: cover; background-position: center; border: 1px solid var(--line); }
+.chip.bad .ic { background: rgba(194,52,52,.12); color: var(--down); }
+.chip .meta { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.chip .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .sz { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .rm { flex: none; border: 0; background: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 0 2px; }
+.chip .rm:hover { color: var(--down); }
+.msg.user .atts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-bottom: 6px; max-width: 78%; }
 .composer:focus-within { border-color: var(--accent); }
 textarea {
   flex: 1; border: 0; outline: 0; resize: none; background: none; color: var(--ink);
-  font: inherit; max-height: 200px; padding: 7px 0; line-height: 1.5;
+  font: inherit; max-height: 200px; padding: 7px 2px; line-height: 1.5; min-width: 0;
 }
 #send {
   flex: none; width: 36px; height: 36px; border-radius: 10px; border: 0;
@@ -241,11 +275,18 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
     <div id="empty">
       <div class="logo">MTW</div>
       <h1>How can I help today?</h1>
-      <p>Research companies, follow the markets, or search the web.</p>
+      <p>Research companies, follow the markets, or summarize your documents.</p>
       <div class="ideas">
         <button class="idea" data-fill="Give me a snapshot of "><b>Company snapshot</b><span>Price, chart, peers and news for any company</span></button>
         <button class="idea" data-fill="What's the stock price of "><b>Stock price</b><span>Latest price or performance over time</span></button>
-        <button class="idea" data-fill="Search the web for "><b>Search the web</b><span>News, facts and explanations, with sources</span></button>
+        <div class="idea multi"><b>Summarize a document</b><span>Upload a file or image, or paste text</span>
+          <div class="acts">
+            <button type="button" data-action="upload">
+              <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.5 10 16a4.2 4.2 0 0 1-6-6l7-7a2.8 2.8 0 0 1 4 4l-7 7a1.4 1.4 0 0 1-2-2l6.3-6.3"/></svg>Upload file</button>
+            <button type="button" data-fill="Summarize this text:&#10;&#10;">
+              <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="10" height="14" rx="2"/><path d="M8 3V2h4v1M8 8h4M8 11h4M8 14h2"/></svg>Paste text</button>
+          </div>
+        </div>
         <button class="idea" data-q="What's moving the markets today?"><b>Market news</b><span>Today's top market headlines</span></button>
       </div>
     </div>
@@ -253,12 +294,18 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
   </div>
   <footer>
     <form class="composer" id="form">
+      <div id="files"></div>
+      <div class="file-err" id="fileErr" role="alert"></div>
+      <button id="attach" type="button" aria-label="Attach documents" title="Attach documents or images - PDF, Word, Excel, PowerPoint, PNG, JPG or text (up to 10 MB)">
+        <svg width="19" height="19" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.5 10 16a4.2 4.2 0 0 1-6-6l7-7a2.8 2.8 0 0 1 4 4l-7 7a1.4 1.4 0 0 1-2-2l6.3-6.3"/></svg>
+      </button>
+      <input type="file" id="filePick" multiple hidden accept=".pdf,.docx,.xlsx,.xlsm,.pptx,.png,.jpg,.jpeg,.webp,.heic,.heif,.txt,.md,.csv,.json,.html,.htm,.xml,.log">
       <textarea id="input" rows="1" placeholder="Ask about a company, the markets or anything else…" autofocus></textarea>
       <button id="send" type="submit" aria-label="Send" disabled>
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5 9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </form>
-    <div class="hint">Quotes may be delayed · Not investment advice · Enter to send, Shift+Enter for a new line</div>
+    <div class="hint">Quotes may be delayed · Not investment advice · Attach documents or images · Enter to send, Shift+Enter for a new line</div>
   </footer>
 </main>
 
@@ -305,6 +352,7 @@ const STEP_LABELS = {
   load_skill_resource: "Reading skill notes", get_current_time: "Checking the time",
   greet_user: "Saying hello", whoami: "Checking user", transfer_to_agent: "Handing off",
   web_search: "Searching the web",
+  read_document: "Reading document", list_documents: "Checking documents",
 };
 
 const api = (path, opts = {}) =>
@@ -344,14 +392,50 @@ const toBottom = (force) => { if (force || nearBottom()) scroller.scrollTop = sc
 
 function showEmpty(on) { $("#empty").style.display = on ? "" : "none"; }
 
-function addUser(text) {
+function chip(name, detail, bad) {
+  const el = document.createElement("span");
+  el.className = "chip" + (bad ? " bad" : "");
+  const ext = (name.split(".").pop() || "doc").slice(0, 4).toUpperCase();
+  el.innerHTML = '<span class="ic"></span><span class="meta"><span class="nm"></span><span class="sz"></span></span>';
+  el.querySelector(".ic").textContent = ext;
+  el.querySelector(".nm").textContent = name;
+  el.querySelector(".sz").textContent = detail || "";
+  el.title = detail ? `${name} - ${detail}` : name;
+  return el;
+}
+
+// docs: [{name, detail, bad}] shown as file chips above the message text
+function addUser(text, docs = []) {
   showEmpty(false);
   const el = document.createElement("div");
   el.className = "msg user";
-  el.innerHTML = '<div class="bubble"></div>';
-  el.firstChild.textContent = text;
+  if (docs.length) {
+    const atts = document.createElement("div");
+    atts.className = "atts";
+    docs.forEach((d) => atts.appendChild(chip(d.name, d.detail, d.bad)));
+    el.appendChild(atts);
+  }
+  if (text) {
+    const b = document.createElement("div");
+    b.className = "bubble";
+    b.textContent = text;
+    el.appendChild(b);
+  }
   thread.appendChild(el);
   return el;
+}
+
+// Stored user messages hold notes like [Attached document: "x.pdf" (3 pages, ~900 words) - ...]
+const DOC_NOTE = /^\[Attached document: "([^"]+)"\s*(?:\(([^)]*)\))?(?: could not be read: ([^\]]*))?.*\]$/;
+function splitUserParts(parts) {
+  const docs = [], texts = [];
+  for (const p of parts || []) {
+    if (!p.text) continue;
+    const m = p.text.trim().match(DOC_NOTE);
+    if (m) docs.push({ name: m[1], detail: m[3] ? "Couldn't be read" : (m[2] || ""), bad: !!m[3] });
+    else texts.push(p.text);
+  }
+  return { docs, text: texts.join("") };
 }
 
 function addBot() {
@@ -469,8 +553,8 @@ async function openSession(id) {
   for (const ev of s.events || []) {
     if (ev.partial) continue;
     if (ev.author === "user") {
-      const text = (ev.content?.parts || []).map((p) => p.text || "").join("");
-      if (text) { addUser(text); bot = null; }
+      const { docs, text } = splitUserParts(ev.content?.parts);
+      if (text || docs.length) { addUser(text, docs); bot = null; }
       continue;
     }
     bot = bot || addBot();
@@ -533,9 +617,21 @@ const input = $("#input"), send = $("#send");
 
 async function ask(text) {
   text = text.trim();
-  if (!text || busy) return;
+  const attached = pending.splice(0);                // files waiting in the composer
+  if ((!text && !attached.length) || busy) { pending.push(...attached); return; }
+  if (!text) text = attached.length > 1 ? "Summarize these documents." : "Summarize this document.";
   busy = true; send.disabled = true;
-  input.value = ""; grow();
+  input.value = ""; grow(); renderFiles(); fileErr.textContent = "";
+
+  let fileParts = [];
+  try {
+    fileParts = await Promise.all(attached.map(async (f) => ({
+      inlineData: { mimeType: mimeOf(f), data: await toBase64(f), displayName: f.name },
+    })));
+  } catch (e) {
+    busy = false; pending.push(...attached); renderFiles(); updateSend();
+    return showFileErr(`Couldn't read the file (${e.message}).`);
+  }
 
   let firstMessage = false;
   if (!sessionId) {
@@ -543,10 +639,10 @@ async function ask(text) {
     if (!res.ok) { busy = false; addError(addBot(), `Couldn't start a chat (HTTP ${res.status}).`); return; }
     sessionId = (await res.json()).id;
     firstMessage = true;
-    setTitle(text.slice(0, 60));
+    setTitle(chatTitle(text, attached));
   }
 
-  addUser(text);
+  addUser(text, attached.map((f) => ({ name: f.name, detail: sizeOf(f.size) })));
   const bot = addBot();
   paint(bot, true);
   toBottom(true);
@@ -558,8 +654,8 @@ async function ask(text) {
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
       body: JSON.stringify({
         appName: APP, userId: USER, sessionId, streaming: true,
-        newMessage: { role: "user", parts: [{ text }] },
-        ...(firstMessage ? { stateDelta: { chat_title: text.slice(0, 60) } } : {}),
+        newMessage: { role: "user", parts: [...fileParts, { text }] },
+        ...(firstMessage ? { stateDelta: { chat_title: chatTitle(text, attached) } } : {}),
       }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -585,14 +681,108 @@ async function ask(text) {
     busy = false; controller = null;
     if (bot.live) { bot.segments.push(bot.live); bot.live = ""; }
     paint(bot, false);
-    send.disabled = !input.value.trim();
+    updateSend();
     if (firstMessage) loadSessions();
     input.focus();
   }
 }
 
+// ------------------------------------------------------------------ attachments
+const IMAGE_EXT = ["png", "jpg", "jpeg", "webp", "heic", "heif"];
+const ALLOWED = ["pdf", "docx", "xlsx", "xlsm", "pptx", ...IMAGE_EXT, "txt", "md", "csv", "json", "html", "htm", "xml", "log"];
+const MIME = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xlsm: "application/vnd.ms-excel.sheet.macroEnabled.12",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", heic: "image/heic", heif: "image/heif",
+  txt: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json", html: "text/html",
+  htm: "text/html", xml: "text/xml", log: "text/plain" };
+const MAX_FILE_MB = 10, MAX_FILES = 5;
+const pending = [];
+const filesEl = $("#files"), fileErr = $("#fileErr"), filePick = $("#filePick");
+const extOf = (f) => (f.name.split(".").pop() || "").toLowerCase();
+const mimeOf = (f) => MIME[extOf(f)] || f.type || "application/octet-stream";
+const sizeOf = (n) => n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1)} MB`;
+const chatTitle = (text, files) => {
+  if (/^Summarize (this|these) documents?\.$/.test(text) && files.length) return `Summary: ${files[0].name}`.slice(0, 60);
+  const pasted = text.match(/^Summarize this text:\s*([\s\S]+)/);
+  if (pasted) return `Summary: ${pasted[1].replace(/\s+/g, " ").trim()}`.slice(0, 60);
+  return text.replace(/\s+/g, " ").slice(0, 60);
+};
+const toBase64 = (f) => new Promise((ok, fail) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(",", 2)[1] || "");
+  r.onerror = () => fail(r.error || new Error("read failed"));
+  r.readAsDataURL(f);
+});
+let errTimer = 0;
+function showFileErr(msg) {
+  fileErr.textContent = msg;
+  clearTimeout(errTimer); errTimer = setTimeout(() => (fileErr.textContent = ""), 6000);
+}
+function updateSend() { send.disabled = busy || (!input.value.trim() && !pending.length); }
+
+function renderFiles() {
+  filesEl.innerHTML = "";
+  pending.forEach((f, i) => {
+    const c = chip(f.name, sizeOf(f.size));
+    if (IMAGE_EXT.includes(extOf(f)) && /^image\/(png|jpeg|webp)$/.test(mimeOf(f))) {   // small preview
+      const ic = c.querySelector(".ic");
+      ic.textContent = ""; ic.classList.add("thumb");
+      ic.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
+    }
+    const rm = document.createElement("button");
+    rm.type = "button"; rm.className = "rm"; rm.textContent = "×"; rm.title = "Remove"; rm.setAttribute("aria-label", `Remove ${f.name}`);
+    rm.onclick = () => { pending.splice(i, 1); renderFiles(); updateSend(); input.focus(); };
+    c.appendChild(rm);
+    filesEl.appendChild(c);
+  });
+}
+
+function addFiles(list) {
+  const problems = [];
+  for (const f of list || []) {
+    const ext = extOf(f);
+    if (["doc", "xls", "ppt"].includes(ext)) problems.push(`${f.name}: old .${ext} format - save it as .${ext}x first`);
+    else if (!ALLOWED.includes(ext)) problems.push(`${f.name}: use PDF, Word, Excel, PowerPoint, an image (PNG/JPG) or a text file`);
+    else if (f.size > MAX_FILE_MB * 1048576) problems.push(`${f.name}: larger than ${MAX_FILE_MB} MB`);
+    else if (pending.length >= MAX_FILES) problems.push(`Up to ${MAX_FILES} files per message`);
+    else if (!pending.some((p) => p.name === f.name && p.size === f.size)) pending.push(f);
+  }
+  if (problems.length) showFileErr([...new Set(problems)].join(" · "));
+  renderFiles(); updateSend(); input.focus();
+}
+
+$("#attach").onclick = () => filePick.click();
+filePick.onchange = () => { addFiles(filePick.files); filePick.value = ""; };
+const composer = $("#form");
+["dragenter", "dragover"].forEach((t) => composer.addEventListener(t, (e) => {
+  if ([...(e.dataTransfer?.types || [])].includes("Files")) { e.preventDefault(); composer.classList.add("drag"); }
+}));
+["dragleave", "drop"].forEach((t) => composer.addEventListener(t, () => composer.classList.remove("drag")));
+composer.addEventListener("drop", (e) => { e.preventDefault(); addFiles(e.dataTransfer.files); });
+// Pasting: files become attachments; very long text becomes a "Pasted text" attachment too,
+// so it's handled like a document (read on demand, not resent with every message).
+const LONG_PASTE = 4000;
+let pasteCount = 0;
+input.addEventListener("paste", (e) => {
+  if (e.clipboardData?.files?.length) {                          // e.g. a pasted screenshot
+    e.preventDefault();
+    const stamp = new Date().toTimeString().slice(0, 8).replace(/:/g, "");
+    return addFiles([...e.clipboardData.files].map((f, i) =>
+      /^image\.\w+$/.test(f.name) ? new File([f], `Screenshot ${stamp}${i ? "-" + i : ""}.${extOf(f)}`, { type: f.type }) : f));
+  }
+  const text = e.clipboardData?.getData("text/plain") || "";
+  if (text.length < LONG_PASTE) return;                         // short text: paste as usual
+  e.preventDefault();
+  pasteCount += 1;
+  addFiles([new File([text], `Pasted text${pasteCount > 1 ? " " + pasteCount : ""}.txt`, { type: "text/plain" })]);
+  if (!input.value.trim() || /^Summarize this text:\s*$/.test(input.value)) input.value = "";
+  grow(); updateSend();
+});
+
 function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 200) + "px"; }
-input.addEventListener("input", () => { grow(); send.disabled = busy || !input.value.trim(); });
+input.addEventListener("input", () => { grow(); updateSend(); });
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(input.value); }
 });
@@ -600,10 +790,11 @@ $("#form").addEventListener("submit", (e) => { e.preventDefault(); ask(input.val
 $("#newChat").onclick = newChat;
 $("#menu").onclick = () => document.body.classList.toggle("nav");
 // Suggestion cards: data-q sends straight away; data-fill starts the message for you to finish.
-document.querySelectorAll(".idea").forEach((b) => (b.onclick = () => {
+document.querySelectorAll(".idea:not(.multi), .idea .acts button").forEach((b) => (b.onclick = () => {
   if (b.dataset.q) return ask(b.dataset.q);
+  if (b.dataset.action === "upload") return filePick.click();   // pick files, then press send
   input.value = b.dataset.fill;
-  grow(); send.disabled = true;
+  grow(); updateSend();
   input.focus();
   input.setSelectionRange(input.value.length, input.value.length);
 }));
