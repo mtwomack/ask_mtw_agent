@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ask MTW</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231f5fbf%22/%3E%3Ctext x=%2216%22 y=%2220.5%22 text-anchor=%22middle%22 font-family=%22Segoe UI,Arial,Helvetica,sans-serif%22 font-size=%2212%22 font-weight=%22700%22 fill=%22%23fff%22 textLength=%2225%22 lengthAdjust=%22spacingAndGlyphs%22%3EMTW%3C/text%3E%3C/svg%3E">
+<title>Ask Ponder</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231f5fbf%22/%3E%3Ctext x=%2216%22 y=%2220.5%22 text-anchor=%22middle%22 font-family=%22Segoe UI,Arial,Helvetica,sans-serif%22 font-size=%2212%22 font-weight=%22700%22 fill=%22%23fff%22 textLength=%2240%22 lengthAdjust=%22spacingAndGlyphs%22%3EPonder%3C/text%3E%3C/svg%3E">
 <style>
 :root {
   --bg: #f6f5f1; --panel: #ffffff; --side: #efede6; --ink: #17171a; --muted: #6d6b66;
@@ -58,8 +58,10 @@ aside {
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 8px; }
 .logo {
-  width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--accent-ink);
-  display: grid; place-items: center; font-weight: 700; font-size: 10px; letter-spacing: -.02em;
+  min-width: 30px; min-height: 24px; padding: 2px 10px; border-radius: 8px;
+  background: var(--accent); color: var(--accent-ink);
+  display: inline-grid; place-items: center; font-weight: 700; font-size: 10px; letter-spacing: -.02em; line-height: 1;
+  white-space: nowrap; overflow: visible; text-overflow: clip;
 }
 .brand b { font-size: 16px; }
 .brand small { display: block; color: var(--muted); font-size: 12px; margin-top: -2px; }
@@ -99,21 +101,37 @@ aside {
 main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 header {
   display: flex; align-items: center; gap: 12px; padding: 10px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
-  min-height: 52px;
+  min-height: 52px; position: relative;
 }
 #title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #menu { display: none; border: 0; background: none; font-size: 20px; padding: 2px 6px; }
 #scroll { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
 #thread { max-width: 860px; margin: 0 auto; padding: 28px 24px 12px; }
 
-.msg { margin: 0 0 22px; display: flex; }
+.msg { margin: 0 0 22px; display: flex; overflow: visible; }
 .msg.user { flex-direction: column; align-items: flex-end; }
 .msg.user .bubble {
   background: var(--user); color: var(--user-ink); padding: 10px 14px; border-radius: 16px 16px 4px 16px;
   max-width: 78%; white-space: pre-wrap; word-wrap: break-word;
 }
-.msg.bot { gap: 12px; }
-.msg.bot .avatar { flex: none; width: 28px; height: 28px; font-size: 9px; border-radius: 8px; margin-top: 2px; }
+.msg.bot { gap: 12px; align-items: flex-start; overflow: visible; }
+.msg.bot .avatar {
+  flex: none;
+  width: auto;            /* allow content to size the avatar */
+  max-width: 60%;         /* cap relative to message width */
+  height: 28px;
+  padding: 2px 10px;     /* slightly more horizontal padding */
+  font-size: 12px;       /* improve legibility for label */
+  border-radius: 8px;
+  margin-top: 2px;
+  display: inline-grid;
+  place-items: center;
+  white-space: nowrap;
+  overflow: visible;     /* ensure text is not clipped */
+  text-overflow: clip;
+  position: relative;
+  z-index: 2;            /* appear above neighboring elements if needed */
+}
 .msg.bot .body { flex: 1; min-width: 0; }
 
 .steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -162,10 +180,40 @@ header {
 .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
 
 /* ---------- empty state ---------- */
-#empty { max-width: 720px; margin: 9vh auto 0; padding: 0 24px; text-align: center; }
+#empty { max-width: 720px; margin: calc(9vh / 4) auto 0; padding: 0 24px; text-align: center; }
 #empty h1 { font-size: 30px; margin: 14px 0 6px; letter-spacing: -.01em; }
 #empty p { color: var(--muted); margin: 0 0 28px; }
-#empty .logo { width: 48px; height: 48px; font-size: 15px; border-radius: 12px; margin: 0 auto; }
+#empty .logo { min-width: 48px; min-height: 48px; padding: 6px 12px; font-size: 15px; border-radius: 12px; margin: 0 auto; display: inline-grid; place-items: center; white-space: nowrap; overflow: visible; }
+
+/* avatar variant that appears in message bubbles */
+.logo.avatar {
+  display: inline-grid; place-items: center; white-space: nowrap; overflow: visible; max-width: 60%;
+}
+
+/* centered logo in the title bar */
+.logo.title-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 16px; /* smaller for balance */
+  letter-spacing: 0.18em; /* stretched-out letters */
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  z-index: 5;
+  display: inline-grid; place-items: center;
+  white-space: nowrap; overflow: visible; text-overflow: clip;
+}
+/* empty-state logo: smaller vertical spacing and matching typography */
+#empty .logo {
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  margin: 6px auto; /* restored previous spacing */
+  padding: 4px 12px;
+}
 .ideas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; text-align: left; }
 .idea { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
 .idea:hover { border-color: var(--accent); }
@@ -271,7 +319,7 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
 </head>
 <body>
 <aside>
-  <div class="brand"><div class="logo">MTW</div><div><b>Ask MTW</b><small>Markets &amp; company research</small></div></div>
+  <div class="brand"><div class="logo">Ponder</div><div><b>Ask Ponder</b><small>Your personal assistant</small></div></div>
   <button class="new-chat" id="newChat"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>New chat</button>
   <div class="list-label">Recent</div>
   <div id="sessions"></div>
@@ -286,9 +334,9 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
   </header>
   <div id="scroll">
     <div id="empty">
-      <div class="logo">MTW</div>
+      <div class="logo">Ponder</div>
       <h1>How can I help today?</h1>
-      <p>Research companies, follow the markets, or summarize your documents.</p>
+      <p>Research companies, follow the markets, summarize your documents, and more ...</p>
       <div class="ideas">
         <button class="idea" data-fill="Give me a snapshot of "><b>Company snapshot</b><span>Price, chart, peers and news for any company</span></button>
         <button class="idea" data-fill="What's the stock price of "><b>Stock price</b><span>Latest price or performance over time</span></button>
@@ -353,7 +401,10 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
 <script>
 "use strict";
 // ------------------------------------------------------------------ config
-const $ = (s) => document.querySelector(s);
+// Safe selector helper: don't override an existing `$` and accept elements
+if (!window.$) {
+  window.$ = (s) => (typeof s === "string" ? document.querySelector(s) : s);
+}
 let APP = "ask_mtw_agent", USER = "user";        // replaced by /chat/config
 let sessionId = null, busy = false, controller = null;
 
@@ -455,7 +506,7 @@ function addBot() {
   showEmpty(false);
   const el = document.createElement("div");
   el.className = "msg bot";
-  el.innerHTML = '<div class="logo avatar">MTW</div><div class="body"><div class="steps"></div><div class="md"></div>' +
+  el.innerHTML = '<div class="logo avatar">Ponder</div><div class="body"><div class="steps"></div><div class="md"></div>' +
                  '<div class="tools"><button data-act="copy">Copy</button></div></div>';
   thread.appendChild(el);
   const bot = { el, steps: el.querySelector(".steps"), md: el.querySelector(".md"), segments: [], live: "", pending: {} };
@@ -523,7 +574,7 @@ function applyEvent(bot, ev) {
 
 // ------------------------------------------------------------------ sessions
 const titleOf = (s) => s.state?.chat_title || "New chat";
-const setTitle = (t) => { $("#title").textContent = t; document.title = t === "New chat" ? "Ask MTW" : `${t} · Ask MTW`; };
+const setTitle = (t) => { $("#title").textContent = t; document.title = t === "New chat" ? "Ask Ponder" : `${t} · Ask Ponder`; };
 function when(ts) {
   if (!ts) return "";
   const d = new Date(ts * 1000), now = new Date();
@@ -829,7 +880,10 @@ function setTheme(t, save) {
   if (save) try { localStorage.setItem("chat-theme", t); } catch { /* storage blocked: still works this visit */ }
 }
 let theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-try { if (THEMES[localStorage.getItem("chat-theme")]) theme = localStorage.getItem("chat-theme"); } catch {}
+try {
+  const stored = localStorage.getItem("chat-theme");
+  if (stored && THEMES[stored]) theme = stored;
+} catch {}
 setTheme(theme, false);
 document.querySelectorAll(".theme").forEach((b) => (b.onclick = () => {
   theme = theme === "dark" ? "light" : "dark";
@@ -838,16 +892,19 @@ document.querySelectorAll(".theme").forEach((b) => (b.onclick = () => {
 
 (async () => {
   try {
-    const cfg = await (await fetch("/chat/config")).json();
+    const res = await fetch("/chat/config");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const cfg = await res.json();
     APP = cfg.app_name || APP; USER = cfg.user_id || USER;
-    if (cfg.display_user) {
-      const who = $("#who");
-      who.title = `Signed in as ${cfg.display_user}`;
+    const who = $("#who");
+    const displayUser = typeof cfg.display_user === "string" ? cfg.display_user.trim() : "";
+    if (who && displayUser) {
+      who.title = `Signed in as ${displayUser}`;
       who.innerHTML = '<span class="initial"></span><span class="name"></span>';
-      who.querySelector(".initial").textContent = cfg.display_user.replace(/^.*:/, "")[0] || "?";
-      who.querySelector(".name").textContent = cfg.display_user;
+      who.querySelector(".initial").textContent = displayUser.replace(/^.*:/, "")[0] || "?";
+      who.querySelector(".name").textContent = displayUser;
     }
-  } catch { /* defaults */ }
+  } catch (e) { /* defaults */ }
   loadSessions();
 })();
 </script>
