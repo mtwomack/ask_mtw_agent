@@ -16,10 +16,11 @@ Project layout:
     <agent package>/     <- e.g. agents_mtw_agent/ (__init__.py, agent.py)
 """
 import os
+import re
 from pathlib import Path
 
 import uvicorn
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 
 import services  # noqa: F401  registers the devpg / dbmem URI schemes, loads .env
@@ -64,6 +65,15 @@ async def chat_config(request: Request):
         return {"app_name": APP_NAME, "user_id": email, "display_user": email}
     return {"app_name": APP_NAME, "user_id": "user",
             "display_user": services.DEV_USER_ID if services.OVERRIDE_ON else ""}
+
+
+@app.get("/chat/{session_id}", include_in_schema=False)
+async def chat_session_page(session_id: str):
+    """/chat/<session id> opens the chat page on that conversation (the page loads it).
+    Registered after /chat/config, so that route still wins."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", session_id):
+        raise HTTPException(status_code=404)
+    return FileResponse(HERE / "chat.html", headers={"Cache-Control": "no-cache"})
 
 
 if os.getenv("WITH_UI", "0") != "1":

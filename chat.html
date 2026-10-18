@@ -171,10 +171,14 @@ header {
 .md .down { color: var(--down); font-weight: 600; }
 .md blockquote { margin: 8px 0; padding: 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
 
-.tools { display: flex; gap: 4px; margin-top: 6px; opacity: 0; transition: opacity .15s; }
-.msg.bot:hover .tools { opacity: 1; }
-.tools button { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 3px 6px; border-radius: 6px; }
+.tools { display: none; gap: 4px; margin-top: 6px; }             /* hidden while the answer streams */
+.msg.bot.done .tools { display: flex; }                           /* always shown once it's final */
+.tools button {
+  width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: none;
+  color: var(--muted); border-radius: 7px;
+}
 .tools button:hover { background: rgba(127,127,127,.12); color: var(--ink); }
+.tools button.ok { color: var(--up); }
 .error { color: var(--down); background: rgba(194,52,52,.08); border: 1px solid rgba(194,52,52,.25); padding: 8px 12px; border-radius: 10px; font-size: 14px; }
 .typing span { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--muted); animation: pulse 1s infinite; }
 .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
@@ -326,6 +330,10 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
 .md a:not([href]) { color: inherit; }
 .md a.ask-link { font-weight: 600; text-decoration: none; border-bottom: 1px dashed currentColor; }
 .md a.ask-link:hover { border-bottom-style: solid; }
+.notice {
+  max-width: 812px; margin: 16px auto 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--line);
+}
 </style>
 </head>
 <body>
@@ -536,18 +544,25 @@ function splitUserParts(parts) {
   return { docs, text: texts.join("") };
 }
 
+const COPY_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const CHECK_ICON = '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
+// Copy button appears only on a finished answer that has text.
+function finish(bot) { if (bot.segments.join("").trim()) bot.el.classList.add("done"); }
+
 function addBot() {
   showEmpty(false);
   const el = document.createElement("div");
   el.className = "msg bot";
   el.innerHTML = '<div class="logo avatar">Ponder</div><div class="body"><div class="steps"></div><div class="md"></div>' +
-                 '<div class="tools"><button data-act="copy">Copy</button></div></div>';
+                 '<div class="tools"><button type="button" data-act="copy" title="Copy" aria-label="Copy response">' + COPY_ICON + '</button></div></div>';
   thread.appendChild(el);
   const bot = { el, steps: el.querySelector(".steps"), md: el.querySelector(".md"), segments: [], live: "", pending: {} };
-  el.querySelector("[data-act=copy]").onclick = (e) => {
-    navigator.clipboard.writeText(bot.segments.concat(bot.live ? [bot.live] : []).join("\n\n")
-      .replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "[chart]"));
-    e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy"), 1200);
+  const copyBtn = el.querySelector("[data-act=copy]");
+  copyBtn.onclick = async () => {
+    const text = bot.segments.join("\n\n").replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "[chart]");
+    try { await navigator.clipboard.writeText(text); } catch { return; }
+    copyBtn.innerHTML = CHECK_ICON; copyBtn.classList.add("ok"); copyBtn.title = "Copied";
+    setTimeout(() => { copyBtn.innerHTML = COPY_ICON; copyBtn.classList.remove("ok"); copyBtn.title = "Copy"; }, 1500);
   };
   return bot;
 }
@@ -638,13 +653,31 @@ async function loadSessions() {
   }
 }
 
-async function openSession(id) {
+// ------------------------------------------------------------------ chat address: /chat/<session id>
+const CHAT_PATH = /^\/chat\/([A-Za-z0-9_-]{8,64})\/?$/;
+const idFromUrl = () => (location.pathname.match(CHAT_PATH) || [])[1] || null;
+function setUrl(id, replace) {
+  const path = id ? `/chat/${encodeURIComponent(id)}` : "/chat";
+  if (location.pathname === path) return;
+  history[replace ? "replaceState" : "pushState"]({ id }, "", path);
+}
+window.addEventListener("popstate", () => {               // browser Back / Forward
+  const id = idFromUrl();
+  if (id) openSession(id, { fromHistory: true }); else newChat({ fromHistory: true });
+});
+
+async function openSession(id, opts = {}) {
   if (busy) return;
   document.body.classList.remove("nav");
-  const res = await api(`/sessions/${id}`);
-  if (!res.ok) return loadSessions();
+  const res = await api(`/sessions/${encodeURIComponent(id)}`);
+  if (!res.ok) {                                          // deleted, unknown or not yours
+    newChat({ replaceUrl: true });
+    showNotice(res.status === 404 ? "That chat wasn't found - it may have been deleted." : `Couldn't open that chat (HTTP ${res.status}).`);
+    return;
+  }
   const s = await res.json();
   sessionId = s.id;
+  if (!opts.fromHistory) setUrl(s.id, opts.replaceUrl);
   setTitle(titleOf(s));
   thread.innerHTML = "";
   let bot = null;
@@ -663,6 +696,7 @@ async function openSession(id) {
     }
     if (ev.errorMessage) addError(bot, ev.errorMessage);
     bot.md.innerHTML = render(bot.segments.join("\n\n"));
+    finish(bot);
   }
   showEmpty(!thread.children.length);
   loadSessions();
@@ -699,9 +733,10 @@ function removeSession(id, title) {
   dlg.showModal();
 }
 
-function newChat() {
+function newChat(opts = {}) {
   if (busy) controller?.abort();
   sessionId = null;
+  if (!opts.fromHistory) setUrl(null, opts.replaceUrl);
   setTitle("New chat");
   thread.innerHTML = "";
   showEmpty(true);
@@ -736,6 +771,7 @@ async function ask(text) {
     const res = await api("/sessions", { method: "POST", body: "{}" });
     if (!res.ok) { busy = false; addError(addBot(), `Couldn't start a chat (HTTP ${res.status}).`); return; }
     sessionId = (await res.json()).id;
+    setUrl(sessionId);                                    // the new chat gets its own address
     firstMessage = true;
     setTitle(chatTitle(text, attached));
   }
@@ -779,6 +815,7 @@ async function ask(text) {
     busy = false; controller = null;
     if (bot.live) { bot.segments.push(bot.live); bot.live = ""; }
     paint(bot, false);
+    finish(bot);
     updateSend();
     if (firstMessage) loadSessions();
     input.focus();
@@ -939,8 +976,17 @@ document.querySelectorAll(".theme").forEach((b) => (b.onclick = () => {
       who.querySelector(".name").textContent = displayUser;
     }
   } catch (e) { /* defaults */ }
-  loadSessions();
+  const startId = idFromUrl();
+  if (startId) openSession(startId, { replaceUrl: true }); else loadSessions();
 })();
+
+// small one-line notice above the composer (e.g. "That chat wasn't found")
+function showNotice(msg) {
+  const n = document.createElement("div");
+  n.className = "notice"; n.textContent = msg;
+  $("#scroll").prepend(n);
+  setTimeout(() => n.remove(), 6000);
+}
 </script>
 </body>
 </html>
