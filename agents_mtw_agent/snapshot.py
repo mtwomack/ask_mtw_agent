@@ -19,6 +19,7 @@ import asyncio
 import base64
 import io
 import re
+from urllib.parse import quote as _urlquote
 from collections import OrderedDict
 from datetime import datetime
 
@@ -189,9 +190,11 @@ def _card(name, symbol, label, quote, summary, profile, peers, news, chart_note)
     lines += ["", chart_note]
 
     if peers.get("status") == "success" and peers.get("peers"):
-        lines += ["", "**Peers**", "", "| Company | Price | Today |", "|:--|--:|--:|"]
+        lines += ["", "**Peers** *(click one for its snapshot)*", "", "| Company | Price | Today |", "|:--|--:|--:|"]
         for p in peers["peers"]:
             who = f"{_md(p['name'])} ({p['symbol']})" if p["name"] != p["symbol"] else p["symbol"]
+            # "#ask=..." link: the chat page sends it as a new message -> a snapshot of that peer
+            who = f"[{who}](#ask={_urlquote('Give me a snapshot of ' + p['symbol'])})"
             lines.append(f"| {who} | {_money(p.get('price'))} | {_pct(p.get('change_pct'))} |")
         if all(p.get("price") is None for p in peers["peers"]):
             lines.append("*Peer prices unavailable right now.*")

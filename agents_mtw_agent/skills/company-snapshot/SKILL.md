@@ -39,6 +39,8 @@ Use the individual tool for that - it's faster and uses fewer API calls.
 3. Otherwise reply with `display_markdown` **exactly as returned**:
    - Do not rewrite, reorder, summarise, translate or re-format it.
    - Do not add a heading above it.
+   - Keep the peer links (`[Name (TICKER)](#ask=...)`) exactly as they are: clicking one in the
+     chat asks for that peer's snapshot.
    - Keep the `**... chart:** \`FILE.png\`` line exactly as it is: it is replaced by the chart
      image automatically. Don't describe the chart pixel by pixel.
 4. After the card you MAY add one short sentence of insight drawn only from the card's
