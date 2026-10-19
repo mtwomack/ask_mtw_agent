@@ -112,7 +112,8 @@ def _providers() -> dict[str, dict]:
         found["microsoft"] = {
             "name": "Microsoft", "id": _env("MICROSOFT_CLIENT_ID"), "secret": _env("MICROSOFT_CLIENT_SECRET"),
             "authorize": f"{base}/authorize", "token": f"{base}/token",
-            "userinfo": "https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName",
+            "userinfo": "https://graph.microsoft.com/v1.0/me?$select=displayName,givenName,surname,"
+                        "userPrincipalName,jobTitle,officeLocation,preferredLanguage",
             "scope": "openid profile User.Read", "pkce": True,
             "extra": {"prompt": "select_account"},
         }
@@ -133,8 +134,15 @@ if MODE == "signin" and not PROVIDERS:
                        "(e.g. GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET) - or AUTH_MODE=off with ENV=local.")
 
 
-async def _fetch_identity(key: str, p: dict, access_token: str) -> tuple[str, str]:
-    """(verified email, display name) for the signed-in account. Raises if there isn't one."""
+def _clean(profile: dict) -> dict:
+    """Drops empty fields and trims long values (the profile travels in the sign-in cookie)."""
+    return {k: str(v)[:300] for k, v in profile.items() if v not in (None, "", [], {})}
+
+
+async def _fetch_identity(key: str, p: dict, access_token: str) -> dict:
+    """Profile of the signed-in account: always a verified "email" and "name", plus whatever
+    else the provider shares (first/last name, picture, language, job title...).
+    Raises if there's no verified email."""
     auth = {"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
     async with httpx.AsyncClient(timeout=TIMEOUT, headers=auth) as client:
         r = await client.get(p["userinfo"])
@@ -142,14 +150,20 @@ async def _fetch_identity(key: str, p: dict, access_token: str) -> tuple[str, st
         info = r.json()
 
         if key == "github":
-            name = info.get("name") or info.get("login") or ""
             r = await client.get("https://api.github.com/user/emails")
             r.raise_for_status()
             emails = [e for e in r.json() if e.get("verified")]
             emails.sort(key=lambda e: not e.get("primary"))
             if not emails:
                 raise ValueError("no verified email on this GitHub account")
-            return emails[0]["email"].lower(), name
+            return _clean({
+                "email": emails[0]["email"].lower(),
+                "name": info.get("name") or info.get("login"),
+                "username": info.get("login"),
+                "picture": info.get("avatar_url"),
+                "company": info.get("company"),
+                "location": info.get("location"),
+            })
 
         if key == "microsoft":
             # userPrincipalName, not "mail": a tenant admin can type any address into "mail",
@@ -157,12 +171,27 @@ async def _fetch_identity(key: str, p: dict, access_token: str) -> tuple[str, st
             upn = (info.get("userPrincipalName") or "").lower()
             if "@" not in upn or "#ext#" in upn:
                 raise ValueError("this Microsoft account has no usable sign-in address")
-            return upn, info.get("displayName") or ""
+            return _clean({
+                "email": upn,
+                "name": info.get("displayName"),
+                "given_name": info.get("givenName"),
+                "family_name": info.get("surname"),
+                "job_title": info.get("jobTitle"),
+                "office": info.get("officeLocation"),
+                "language": info.get("preferredLanguage"),
+            })
 
         # Google: standard OpenID claims; the email must be verified by the provider.
         if not info.get("email") or info.get("email_verified") not in (True, "true"):
             raise ValueError("the account's email address isn't verified")
-        return info["email"].lower(), info.get("name") or ""
+        return _clean({
+            "email": info["email"].lower(),
+            "name": info.get("name"),
+            "given_name": info.get("given_name"),
+            "family_name": info.get("family_name"),
+            "picture": info.get("picture"),
+            "language": info.get("locale"),
+        })
 
 
 # ------------------------------------------------------------------ entitlement
@@ -239,10 +268,14 @@ def _cookie(headers: dict[str, str], name: str) -> str:
 
 # ------------------------------------------------------------------ who is calling
 async def _identity(headers: dict[str, str]) -> dict | None:
-    """{"email", "name", "via"} of the signed-in person, or None."""
+    """{"email", "name", "via", "profile"} of the signed-in person, or None."""
     if MODE == "signin":
         p = _unsign(_cookie(headers, COOKIE))
-        return {"email": p["email"], "name": p.get("name") or "", "via": p.get("via", "")} if p else None
+        if not p:
+            return None
+        profile = {**(p.get("profile") or {}), "email": p["email"], "signed_in_with": p.get("via", "")}
+        return {"email": p["email"], "name": p.get("name") or "", "via": p.get("via", ""),
+                "profile": _clean(profile)}
     return None
 
 
@@ -290,23 +323,11 @@ class AuthMiddleware:
         email = who["email"]
         if not is_entitled(email):
             return await reject(403, "not_entitled")
-        if is_admin(email):
-            return await self.app(scope, receive, send)          # admins: everything
-        if scope["type"] == "websocket":
-            return await reject(403, "forbidden")
+        admin = is_admin(email)
 
-        # Own sessions / documents: /apps/<app>/users/<me>/...
-        parts = path.split("/")
-        if len(parts) >= 5 and parts[1] == "apps" and parts[3] == "users":
-            if unquote(parts[2]) == APP_NAME and unquote(parts[4]).lower() == email:
-                return await self.app(scope, receive, send)
-            return await reject(403, "forbidden")
-
-        if path == "/list-apps" and method == "GET":
-            return await self.app(scope, receive, send)
-
-        # Runs: the JSON body names the user and app - check them before the agent sees it.
-        if path in ("/run", "/run_sse") and method == "POST":
+        # Runs: the JSON body names the user and app - check them before the agent sees it,
+        # and hand the agent the person's profile (session state "user:profile", read by whoami).
+        if scope["type"] == "http" and path in ("/run", "/run_sse") and method == "POST":
             body, more = b"", True
             while more:
                 message = await receive()
@@ -320,8 +341,16 @@ class AuthMiddleware:
                 app_name = data.get("appName", data.get("app_name"))
             except Exception:
                 return await reject(400, "bad_request")
-            if not isinstance(user, str) or user.lower() != email or app_name not in (None, APP_NAME):
+            own = isinstance(user, str) and user.lower() == email and app_name in (None, APP_NAME)
+            if not own and not admin:
                 return await reject(403, "forbidden")
+            if own:
+                delta = data.pop("state_delta", None) or data.get("stateDelta") or {}
+                data["stateDelta"] = {**delta, "user:profile": who["profile"]}
+                body = json.dumps(data).encode()
+                scope = {**scope, "headers": [(k, v) for k, v in scope.get("headers", [])
+                                              if k.lower() != b"content-length"]
+                         + [(b"content-length", str(len(body)).encode())]}
 
             sent = False
 
@@ -333,6 +362,21 @@ class AuthMiddleware:
                 return await receive()
 
             return await self.app(scope, replay, send)
+
+        if admin:
+            return await self.app(scope, receive, send)          # admins: everything else
+        if scope["type"] == "websocket":
+            return await reject(403, "forbidden")
+
+        # Own sessions / documents: /apps/<app>/users/<me>/...
+        parts = path.split("/")
+        if len(parts) >= 5 and parts[1] == "apps" and parts[3] == "users":
+            if unquote(parts[2]) == APP_NAME and unquote(parts[4]).lower() == email:
+                return await self.app(scope, receive, send)
+            return await reject(403, "forbidden")
+
+        if path == "/list-apps" and method == "GET":
+            return await self.app(scope, receive, send)
 
         return await reject(403, "forbidden")    # Swagger, dev UI, debug/eval endpoints, ...
 
@@ -403,7 +447,8 @@ def install(app, app_name: str):
             tokens = r.json()
             if r.status_code != 200 or "access_token" not in tokens:
                 raise ValueError(tokens.get("error_description") or tokens.get("error") or f"HTTP {r.status_code}")
-            email, name = await _fetch_identity(key, p, tokens["access_token"])
+            profile = await _fetch_identity(key, p, tokens["access_token"])
+            email, name = profile["email"], profile.get("name", "")
         except Exception as e:
             print(f"[auth] {key} sign-in failed: {type(e).__name__}: {e}")
             return _back_to_chat("failed")
@@ -411,7 +456,7 @@ def install(app, app_name: str):
         if not is_entitled(email):
             print(f"[auth] not entitled: {email} (via {key})")
             return _back_to_chat("not_entitled", email)
-        token = _sign({"email": email, "name": name, "via": key,
+        token = _sign({"email": email, "name": name, "via": key, "profile": profile,
                        "exp": int(time.time()) + SESSION_SECONDS})
         res = RedirectResponse(flow["next"], status_code=303)
         res.set_cookie(COOKIE, token, max_age=SESSION_SECONDS, httponly=True, samesite="lax",
@@ -453,4 +498,5 @@ async def chat_config(request: Request, app_name: str, dev_user: str) -> dict:
         return {**base, "signed_in": False, "reason": "not_entitled", "email": who["email"]}
     return {**base, "signed_in": True, "user_id": who["email"], "email": who["email"],
             "display_user": who["name"] or who["email"], "via": who["via"],
+            "picture": who["profile"].get("picture", ""),
             "admin": is_admin(who["email"])}

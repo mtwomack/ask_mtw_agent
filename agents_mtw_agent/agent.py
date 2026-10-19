@@ -62,9 +62,29 @@ def greet_user(name: str) -> dict:
     return {"status": "success", "message": f"Hello {name}! Welcome!"}
 
 
+# Labels for the profile fields the sign-in provides (see auth.py), in display order.
+PROFILE_FIELDS = {
+    "name": "Name", "given_name": "First name", "family_name": "Last name", "email": "Email",
+    "username": "Username", "job_title": "Job title", "office": "Office", "company": "Company",
+    "location": "Location", "language": "Language", "signed_in_with": "Signed in with",
+    "picture": "Profile picture",
+}
+
+
 def whoami(tool_context: ToolContext) -> dict:
-    """Returns the user ID of the current session."""
-    return {"user_id": tool_context.user_id}
+    """Returns who the current user is: their user ID and, when they signed in with Google,
+    Microsoft or GitHub, their profile - name, first and last name, email, profile picture,
+    language, job title / office (Microsoft work accounts), username / company / location
+    (GitHub), and which provider they signed in with. Only fields the provider shared appear."""
+    profile = tool_context.state.get("user:profile") or {}
+    result = {"user_id": tool_context.user_id}
+    if not profile:
+        result["note"] = "Sign-in is off (local development), so only the user ID is known."
+        return result
+    result["profile"] = {label: profile[key] for key, label in PROFILE_FIELDS.items() if profile.get(key)}
+    if profile.get("signed_in_with"):
+        result["profile"]["Signed in with"] = profile["signed_in_with"].title().replace("Github", "GitHub")
+    return result
 
 
 # ---------------------------------------------------------------------- sub-agents
@@ -94,6 +114,12 @@ and stock prices.
 
 Time and greetings:
 - Use get_current_time for the time in a city and greet_user to greet someone by name.
+
+Who the user is:
+- When the user asks who they are, what you know about them, or about their account, call
+  whoami and show every field it returns as a short list (label: value). If there's a
+  "Profile picture" link, show it as an image: ![Profile picture](<link>). If whoami says
+  sign-in is off, say only the user ID is known.
 
 Stock prices:
 - For a current price, call get_stock_price with the company name or ticker (one call per company).
