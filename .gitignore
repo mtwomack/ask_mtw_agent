@@ -30,3 +30,6 @@ uv.lock.*.bak
 .idea/
 .DS_Store
 Thumbs.db
+
+# ADK local data (chat history) - never commit
+.adk/
