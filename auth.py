@@ -56,7 +56,7 @@ from urllib.parse import quote, unquote, urlencode
 
 import httpx
 from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 COOKIE = "chat_auth"
 STATE_COOKIE = "chat_oauth"
@@ -318,7 +318,11 @@ class AuthMiddleware:
                 return await send({"type": "websocket.close", "code": 4401 if status == 401 else 4403})
             return await _deny(status, detail)(scope, receive, send)
 
+        page = _admin_page(path) if scope["type"] == "http" and method == "GET" and _wants_html(scope) else None
         if not who:
+            if page:     # a browser opening /dev-ui or /docs: sign in first, then come back here
+                return await RedirectResponse(f"/chat?{urlencode({'next': page})}",
+                                              status_code=303)(scope, receive, send)
             return await reject(401, "sign_in_required")
         email = who["email"]
         if not is_entitled(email):
@@ -365,6 +369,10 @@ class AuthMiddleware:
 
         if admin:
             return await self.app(scope, receive, send)          # admins: everything else
+        if page:
+            import html
+            return await HTMLResponse(ADMIN_ONLY_HTML.format(email=html.escape(email)),
+                                      status_code=403)(scope, receive, send)
         if scope["type"] == "websocket":
             return await reject(403, "forbidden")
 
@@ -382,11 +390,37 @@ class AuthMiddleware:
 
 
 # ------------------------------------------------------------------ sign-in routes
+# Admin pages a browser may be sent back to after signing in.
+ADMIN_PAGES = ("/dev-ui/", "/docs")
+
+
 def _safe_next(target: str | None) -> str:
-    """Only send people back to the chat itself after signing in (no open redirects)."""
-    if target and (target == "/chat" or _CHAT_PAGE.fullmatch(target)):
+    """Only send people back to the chat or an admin page after signing in (no open redirects)."""
+    if target and (target == "/chat" or _CHAT_PAGE.fullmatch(target) or target in ADMIN_PAGES):
         return target
     return "/chat"
+
+
+def _admin_page(path: str) -> str | None:
+    """The admin page a browser path belongs to ("/dev-ui/..." -> "/dev-ui/"), or None."""
+    if path == "/dev-ui" or path.startswith("/dev-ui/"):
+        return "/dev-ui/"
+    if path in ("/docs", "/redoc"):
+        return "/docs"
+    return None
+
+
+def _wants_html(scope) -> bool:
+    for k, v in scope.get("headers", []):
+        if k.lower() == b"accept":
+            return b"text/html" in v
+    return False
+
+
+ADMIN_ONLY_HTML = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admins only</title><body style="font:15px system-ui,sans-serif;max-width:520px;margin:15vh auto;padding:0 16px;color:#333">
+<h2>Admins only</h2><p>The developer pages are only for the emails in <code>ADMIN_EMAILS</code> in <code>.env</code>.
+You're signed in as <b>{email}</b>.</p><p><a href="/chat">Back to the chat</a></p></body>"""
 
 
 def _callback_url(request: Request, key: str) -> str:

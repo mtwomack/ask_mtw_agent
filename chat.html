@@ -1085,7 +1085,10 @@ function showGate(message = "", email = "") {
   document.body.classList.add("gated");
   const gate = $("#gate"), list = $("#providers"), err = $("#gateErr"), again = $("#gateAgain");
   gate.querySelector(".logo").textContent = $(".brand .logo")?.textContent || "";
-  const next = location.pathname.match(CHAT_PATH) ? location.pathname : "/chat";
+  // where to land after signing in: this chat, or an admin page that sent us here (/chat?next=/dev-ui/)
+  const asked = new URLSearchParams(location.search).get("next");
+  const next = ["/dev-ui/", "/docs"].includes(asked) ? asked
+    : location.pathname.match(CHAT_PATH) ? location.pathname : "/chat";
   list.replaceChildren();
   again.hidden = true;
   err.style.color = "";
@@ -1121,7 +1124,10 @@ $("#signout").onclick = async () => {
   // errors handed back by the sign-in redirect (?auth_error=...), then tidy the address bar
   const q = new URLSearchParams(location.search);
   const authError = q.get("auth_error"), authEmail = q.get("email") || "";
-  if (authError) history.replaceState(null, "", location.pathname);
+  if (authError) {                    // keep only ?next (if any) in the address bar
+    const keep = q.get("next") ? `?${new URLSearchParams({ next: q.get("next") })}` : "";
+    history.replaceState(null, "", location.pathname + keep);
+  }
 
   let cfg = {};
   try {
