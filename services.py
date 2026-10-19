@@ -35,7 +35,11 @@ for _p in dict.fromkeys(p.resolve() for p in _candidates):
         break
 
 DEV_USER_ID = os.getenv("DEV_USER_ID", DEFAULT_USER_ID).strip().strip('"').strip("'")
-OVERRIDE_ON = os.getenv("ENV", "").strip().lower() == "local"
+# The override maps EVERY user to DEV_USER_ID - only for local dev without sign-in.
+# With sign-in (AUTH_MODE=signin, see auth.py) each person keeps their own user ID (their email).
+_ENV_LOCAL = os.getenv("ENV", "").strip().lower() == "local"
+_AUTH_MODE = (os.getenv("AUTH_MODE") or ("off" if _ENV_LOCAL else "signin")).strip().lower()
+OVERRIDE_ON = _ENV_LOCAL and _AUTH_MODE == "off"
 
 from google.adk.artifacts import InMemoryArtifactService
 from google.adk.cli.service_registry import get_service_registry

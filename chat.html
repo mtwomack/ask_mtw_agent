@@ -335,6 +335,44 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
   max-width: 812px; margin: 16px auto 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; color: var(--muted);
   background: var(--panel); border: 1px solid var(--line);
 }
+
+/* ---------- sign in ---------- */
+.signout {
+  flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--line); background: var(--panel); border-radius: 8px; color: var(--muted);
+}
+.signout:hover { color: var(--ink); border-color: var(--accent); }
+.signout[hidden] { display: none; }
+#gate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+  background: var(--bg);
+}
+#gate[hidden] { display: none; }
+#gate .card {
+  width: min(400px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow); padding: 32px 28px 26px; text-align: center;
+}
+#gate .logo { font-size: 20px; padding: 6px 14px; }
+#gate h1 { font-size: 20px; margin: 14px 0 6px; }
+#gate p { color: var(--muted); font-size: 14px; margin: 0 0 22px; line-height: 1.5; }
+#gate .providers { display: grid; gap: 10px; }
+#gate .providers a {
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 0 16px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink);
+  font-size: 15px; font-weight: 600; text-decoration: none; transition: border-color .12s, background .12s;
+}
+#gate .providers a:hover, #gate .providers a:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
+#gate .providers a .mark {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700;
+}
+#gate .again { margin-top: 12px; border: 0; background: none; color: var(--accent); font-size: 13px; padding: 4px; }
+#gate .again[hidden] { display: none; }
+#gate .err { color: var(--down); font-size: 13px; margin-top: 14px; line-height: 1.45; }
+#gate .err:empty { display: none; }
+#gate .err b { color: var(--ink); font-weight: 600; word-break: break-all; }
+#gate .fine { margin-top: 18px; font-size: 12px; color: var(--muted); }
+body.gated > aside, body.gated > main { visibility: hidden; }
 </style>
 </head>
 <body>
@@ -351,6 +389,9 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
     <div id="title">New chat</div>
     <div class="who" id="who"></div>
     <button class="theme" type="button" title="Switch light / dark"></button>
+    <button class="signout" id="signout" type="button" title="Sign out" aria-label="Sign out" hidden>
+      <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17H4.5A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3H8M13 14l4-4-4-4M17 10H8"/></svg>
+    </button>
   </header>
   <div id="scroll">
     <div id="empty">
@@ -389,6 +430,18 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
     <div class="hint">Quotes may be delayed · Not investment advice · Attach documents or images · Enter to send, Shift+Enter for a new line</div>
   </footer>
 </main>
+
+<div id="gate" hidden role="dialog" aria-labelledby="gateTitle">
+  <div class="card">
+    <div class="logo">Ponder</div>
+    <h1 id="gateTitle">Sign in to continue</h1>
+    <p id="gateText">Choose how you'd like to sign in. Your chats are private to you.</p>
+    <div class="providers" id="providers"></div>
+    <div class="err" id="gateErr" role="alert"></div>
+    <button class="again" id="gateAgain" type="button" hidden>Try again</button>
+    <div class="fine">Access is limited to approved accounts.</div>
+  </div>
+</div>
 
 <dialog class="confirm" id="confirmDelete" aria-labelledby="cdTitle" aria-describedby="cdText">
   <form method="dialog">
@@ -439,9 +492,23 @@ const STEP_LABELS = {
   read_document: "Reading document", list_documents: "Checking documents",
 };
 
+let AUTH = { mode: "off" };                      // from /chat/config
+
+// Every API call goes through here: an expired or revoked sign-in shows the sign-in screen.
+async function guarded(promise) {
+  const res = await promise;
+  if (AUTH.mode !== "off" && (res.status === 401 || res.status === 403)) {
+    let detail = "";
+    try { detail = (await res.clone().json()).detail || ""; } catch {}
+    if (res.status === 401) showGate("Your sign-in has expired. Please sign in again.");
+    else if (detail === "not_entitled") showGate("Your account no longer has access.");
+  }
+  return res;
+}
+
 const api = (path, opts = {}) =>
-  fetch(`/apps/${APP}/users/${encodeURIComponent(USER)}${path}`,
-        { headers: { "Content-Type": "application/json" }, ...opts });
+  guarded(fetch(`/apps/${APP}/users/${encodeURIComponent(USER)}${path}`,
+                { headers: { "Content-Type": "application/json" }, ...opts }));
 
 // ------------------------------------------------------------------ markdown
 marked.setOptions({ gfm: true, breaks: true });
@@ -784,7 +851,7 @@ async function ask(text) {
 
   controller = new AbortController();
   try {
-    const res = await fetch("/run_sse", {
+    const res = await guarded(fetch("/run_sse", {
       method: "POST", signal: controller.signal,
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
       body: JSON.stringify({
@@ -792,7 +859,7 @@ async function ask(text) {
         newMessage: { role: "user", parts: [...fileParts, { text }] },
         ...(firstMessage ? { stateDelta: { chat_title: chatTitle(text, attached) } } : {}),
       }),
-    });
+    }));
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
 
     const reader = res.body.getReader(), decoder = new TextDecoder();
@@ -962,21 +1029,84 @@ document.querySelectorAll(".theme").forEach((b) => (b.onclick = () => {
   setTheme(theme, true);
 }));
 
+// ------------------------------------------------------------------ sign in
+const AUTH_ERRORS = {
+  not_entitled: (email) => email
+    ? `<b></b> doesn't have access yet. Ask the app's owner to add it, or sign in with another account.`
+    : "That account doesn't have access yet. Ask the app's owner to add it.",
+  cancelled: () => "Sign-in was cancelled.",
+  expired: () => "The sign-in took too long or was started in another window. Please try again.",
+  failed: () => "Sign-in didn't work. Please try again, or use another option.",
+};
+
+function showGate(message = "", email = "") {
+  if (AUTH.mode === "off") return;
+  if (controller) controller.abort();
+  document.body.classList.add("gated");
+  const gate = $("#gate"), list = $("#providers"), err = $("#gateErr"), again = $("#gateAgain");
+  gate.querySelector(".logo").textContent = $(".brand .logo")?.textContent || "";
+  const next = location.pathname.match(CHAT_PATH) ? location.pathname : "/chat";
+  list.replaceChildren();
+  again.hidden = true;
+  err.style.color = "";
+  for (const p of AUTH.providers || []) {
+    const a = document.createElement("a");
+    a.href = `/auth/login/${encodeURIComponent(p.id)}?next=${encodeURIComponent(next)}`;
+    const mark = document.createElement("span");
+    mark.className = "mark"; mark.textContent = (p.name || "?")[0]; mark.setAttribute("aria-hidden", "true");
+    a.append(mark, `Continue with ${p.name}`);
+    list.append(a);
+  }
+  err.innerHTML = message;                         // message is built from fixed strings only
+  const b = err.querySelector("b");
+  if (b) b.textContent = email;
+  gate.hidden = false;
+  (list.querySelector("a") || again).focus?.();
+}
+
+$("#gateAgain").onclick = () => location.reload();
+
+$("#signout").onclick = async () => {
+  if (!AUTH.signout) return;
+  try { await fetch(AUTH.signout, { method: "POST" }); } catch {}
+  sessionId = null;
+  $("#sessions").replaceChildren();
+  $("#thread").replaceChildren();
+  history.replaceState(null, "", "/chat");
+  showGate("You're signed out.");
+  $("#gateErr").style.color = "var(--muted)";
+};
+
 (async () => {
+  // errors handed back by the sign-in redirect (?auth_error=...), then tidy the address bar
+  const q = new URLSearchParams(location.search);
+  const authError = q.get("auth_error"), authEmail = q.get("email") || "";
+  if (authError) history.replaceState(null, "", location.pathname);
+
+  let cfg = {};
   try {
     const res = await fetch("/chat/config");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const cfg = await res.json();
-    APP = cfg.app_name || APP; USER = cfg.user_id || USER;
-    const who = $("#who");
-    const displayUser = typeof cfg.display_user === "string" ? cfg.display_user.trim() : "";
-    if (who && displayUser) {
-      who.title = `Signed in as ${displayUser}`;
-      who.innerHTML = '<span class="initial"></span><span class="name"></span>';
-      who.querySelector(".initial").textContent = displayUser.replace(/^.*:/, "")[0] || "?";
-      who.querySelector(".name").textContent = displayUser;
-    }
+    cfg = await res.json();
   } catch (e) { /* defaults */ }
+  APP = cfg.app_name || APP;
+  AUTH = cfg.auth || { mode: "off" };
+
+  if (AUTH.mode !== "off" && !cfg.signed_in) {
+    const kind = cfg.reason === "not_entitled" ? "not_entitled" : authError;
+    showGate(kind && AUTH_ERRORS[kind] ? AUTH_ERRORS[kind](cfg.email || authEmail) : "", cfg.email || authEmail);
+    return;
+  }
+  USER = cfg.user_id || USER;
+  const who = $("#who");
+  const displayUser = typeof cfg.display_user === "string" ? cfg.display_user.trim() : "";
+  if (who && displayUser) {
+    who.title = `Signed in as ${cfg.email || displayUser}${cfg.via ? ` (${cfg.via})` : ""}`;
+    who.innerHTML = '<span class="initial"></span><span class="name"></span>';
+    who.querySelector(".initial").textContent = displayUser.replace(/^.*:/, "")[0] || "?";
+    who.querySelector(".name").textContent = displayUser;
+  }
+  $("#signout").hidden = AUTH.mode === "off";
   const startId = idFromUrl();
   if (startId) openSession(startId, { replaceUrl: true }); else loadSessions();
 })();
