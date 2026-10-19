@@ -300,6 +300,7 @@ textarea {
   .msg.bot .body { width: 100%; }
   .md table { font-size: 13px; }
   .md pre { margin-left: -2px; margin-right: -2px; }
+  .hint-more { display: none; }          /* phones: just "Quotes may be delayed · Not investment advice" */
 }
 
 /* ---------- confirm dialog ---------- */
@@ -437,7 +438,7 @@ body.gated > aside, body.gated > main { visibility: hidden; }
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5 9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </form>
-    <div class="hint">Quotes may be delayed · Not investment advice · Attach documents or images · Enter to send, Shift+Enter for a new line</div>
+    <div class="hint">Quotes may be delayed · Not investment advice<span class="hint-more"> · Attach documents or images · Enter to send, Shift+Enter for a new line</span></div>
   </footer>
 </main>
 
