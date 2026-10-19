@@ -142,10 +142,59 @@ def _safe(url: str) -> str:
     return f"{p.scheme}://{p.username}:***@{p.hostname}{p.path}"
 
 
+# ------------------------------------------------------------------ schema check
+# DB_SCHEMA=cloud (set on Cloud Run) means "my tables must live in the cloud schema".
+# The schema itself comes from the database role in DATABASE_URL (ALTER ROLE ... SET
+# search_path, see deploy/cloud_schema.sql) - that works through Neon's pooler, where
+# SET search_path doesn't. This only checks it, so the app never writes to the wrong schema.
+DB_SCHEMA = os.getenv("DB_SCHEMA", "").strip()
+_checked: set[str] = set()
+
+
+def _check_schema(url: str, engine_kwargs: dict) -> None:
+    if not DB_SCHEMA or url in _checked:
+        return
+    import asyncio
+    import threading
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    async def probe():
+        engine = create_async_engine(url, **engine_kwargs)
+        try:
+            async with engine.connect() as conn:
+                return (await conn.execute(text("select current_schema()"))).scalar()
+        finally:
+            await engine.dispose()
+
+    out: dict = {}
+
+    def run():                       # own thread + loop: works whether or not a loop is running
+        try:
+            out["schema"] = asyncio.run(probe())
+        except Exception as e:       # noqa: BLE001 - reported below
+            out["error"] = e
+
+    worker = threading.Thread(target=run)
+    worker.start()
+    worker.join()
+    if "error" in out:
+        raise RuntimeError(f"[services.py] can't reach the database to check DB_SCHEMA: {out['error']}")
+    if out["schema"] != DB_SCHEMA:
+        raise RuntimeError(
+            f"[services.py] DB_SCHEMA={DB_SCHEMA} but this database login uses schema "
+            f"{out['schema'] or '(none - the schema does not exist yet)'}. Run deploy/cloud_schema.sql "
+            f"in the Neon SQL editor and use that role's connection string as DATABASE_URL.")
+    _checked.add(url)
+    print(f"[services.py] schema   -> {DB_SCHEMA}")
+
+
 # ------------------------------------------------------------------ factories
 def _devpg_factory(uri, **kwargs):
     url, engine_kwargs = _pg(uri)
     print(f"[services.py] sessions -> {_safe(url)}")
+    _check_schema(url, engine_kwargs)
     return DevUserDatabaseSessionService(db_url=url, **engine_kwargs)
 
 
@@ -161,6 +210,7 @@ def _dbmem_factory(uri, **kwargs):
     from adk_database_memory import DatabaseMemoryService
     url, engine_kwargs = _pg(uri)
     print(f"[services.py] memory   -> {_safe(url)}")
+    _check_schema(url, engine_kwargs)
     return DatabaseMemoryService(url, **engine_kwargs)
 
 
