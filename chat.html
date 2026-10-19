@@ -301,6 +301,17 @@ textarea {
   .md table { font-size: 13px; }
   .md pre { margin-left: -2px; margin-right: -2px; }
   .hint-more { display: none; }          /* phones: just "Quotes may be delayed · Not investment advice" */
+
+  /* phones: smaller text and a slimmer message box */
+  body { font-size: 14px; }
+  #title { font-size: 15px; }
+  .msg.user .bubble { padding: 8px 12px; }
+  .md table { font-size: 12.5px; }
+  .md th, .md td { padding: 6px 8px; }
+  .composer { padding: 4px 6px; border-radius: 14px; gap: 2px 4px; }
+  #attach, #send { width: 32px; height: 32px; border-radius: 9px; }
+  textarea { padding: 4px 2px; line-height: 1.4; }   /* stays 16px: iPhone zooms in on smaller text boxes */
+  .hint { font-size: 10.5px; margin-top: 4px; }
 }
 
 /* ---------- confirm dialog ---------- */
@@ -572,6 +583,13 @@ document.addEventListener("error", (e) => {
 
 // ------------------------------------------------------------------ thread UI
 const thread = $("#thread"), scroller = $("#scroll");
+
+// phones: a short placeholder so the empty message box stays one line
+const PHONE = matchMedia("(max-width: 760px)");
+const LONG_PLACEHOLDER = $("#input").placeholder;
+const fitPlaceholder = () => { $("#input").placeholder = PHONE.matches ? "Ask anything…" : LONG_PLACEHOLDER; };
+fitPlaceholder();
+PHONE.addEventListener?.("change", fitPlaceholder);
 const nearBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
 const toBottom = (force) => { if (force || nearBottom()) scroller.scrollTop = scroller.scrollHeight; };
 
