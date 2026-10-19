@@ -308,9 +308,12 @@ textarea {
   .msg.user .bubble { padding: 8px 12px; }
   .md table { font-size: 12.5px; }
   .md th, .md td { padding: 6px 8px; }
-  .composer { padding: 4px 6px; border-radius: 14px; gap: 2px 4px; }
-  #attach, #send { width: 32px; height: 32px; border-radius: 9px; }
-  textarea { padding: 4px 2px; line-height: 1.4; }   /* stays 16px: iPhone zooms in on smaller text boxes */
+  .composer { padding: 3px 5px; border-radius: 12px; gap: 2px 4px; align-items: center; }
+  #attach, #send { width: 30px; height: 30px; border-radius: 8px; }
+  #attach svg { width: 17px; height: 17px; }
+  #send svg { width: 16px; height: 16px; }
+  /* 14px text; the iPhone auto-zoom this would normally trigger is turned off in the script below */
+  textarea { font-size: 14px; padding: 3px 2px; line-height: 1.35; max-height: 120px; }
   .hint { font-size: 10.5px; margin-top: 4px; }
 }
 
@@ -583,6 +586,14 @@ document.addEventListener("error", (e) => {
 
 // ------------------------------------------------------------------ thread UI
 const thread = $("#thread"), scroller = $("#scroll");
+
+// iPhone/iPad Safari zooms the whole page when you tap a text box with text under 16px.
+// maximum-scale=1 stops that auto-zoom; on iOS you can still pinch to zoom.
+if (/iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+  document.querySelector('meta[name="viewport"]')
+    ?.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+}
 
 // phones: a short placeholder so the empty message box stays one line
 const PHONE = matchMedia("(max-width: 760px)");
