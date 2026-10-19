@@ -290,6 +290,16 @@ textarea {
   #thread, footer { padding-left: 16px; padding-right: 16px; }
   .ideas { grid-template-columns: 1fr; }
   .msg.user .bubble { max-width: 90%; }
+
+  /* phones: replies use the full width - the label sits above the reply, not beside it */
+  #thread { padding: 16px 12px 8px; }
+  footer { padding: 6px 10px calc(10px + env(safe-area-inset-bottom)); }
+  .msg { margin-bottom: 18px; }
+  .msg.bot { flex-direction: column; gap: 6px; }
+  .msg.bot .avatar { height: 22px; padding: 1px 8px; font-size: 11px; margin-top: 0; }
+  .msg.bot .body { width: 100%; }
+  .md table { font-size: 13px; }
+  .md pre { margin-left: -2px; margin-right: -2px; }
 }
 
 /* ---------- confirm dialog ---------- */
