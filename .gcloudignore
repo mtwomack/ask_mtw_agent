@@ -1,0 +1,16 @@
+# Files NOT uploaded to Cloud Build by `gcloud run deploy --source .`
+# Secrets and local data must never leave your PC.
+.env
+.env.*
+!.env.example
+_env
+.venv/
+__pycache__/
+*.pyc
+.git/
+.adk/
+*.db
+*.log
+*.bak
+dbtest.py
+scripts/
