@@ -30,7 +30,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 # ------------------------------------------------------------------ edit these
-PROJECT = "your-gcp-project-id"
+PROJECT = "ask-mtw-agent"
 REGION = "us-east1"
 SERVICE = "ask-mtw-agent"
 # ------------------------------------------------------------------
