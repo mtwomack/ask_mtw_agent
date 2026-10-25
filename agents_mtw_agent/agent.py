@@ -26,6 +26,7 @@ from .company_tools import (
     get_company_news, get_company_peers, get_company_profile, get_market_news,
     get_stock_price, get_stock_price_history,
 )
+from .admin_tools import account_activity
 from .documents import DocumentUploadPlugin, list_documents, read_document
 from .search_tools import web_search
 from .snapshot import attach_snapshot_charts, company_snapshot, strip_inline_charts
@@ -115,6 +116,11 @@ and stock prices.
 Time and greetings:
 - Use get_current_time for the time in a city and greet_user to greet someone by name.
 
+Account activity (admins only):
+- When the user asks for account activity, usage, or who has been using the app, call
+  account_activity. If it succeeds, show its table_markdown exactly as returned, then its note.
+  If it says it's only for admins, tell the user that politely and don't guess any numbers.
+
 Who the user is:
 - When the user asks who they are, what you know about them, or about their account, call
   whoami and show every field it returns as a short list (label: value). If there's a
@@ -202,6 +208,7 @@ root_agent = LlmAgent(
         get_company_profile, get_company_peers, get_company_news, get_market_news,
         web_search,
         read_document, list_documents,
+        account_activity,
         skills,
     ],
     sub_agents=[echo_agent],
