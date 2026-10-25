@@ -14,7 +14,7 @@ Reads the same Postgres database as the chats (DATABASE_URL): the "public" schem
 "cloud" on Cloud Run. With in-memory sessions (chat mem) there is no database to read.
 """
 import os
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from google.adk.tools import ToolContext
@@ -71,11 +71,22 @@ limit :limit
 
 
 def _fmt_time(value, tz: ZoneInfo) -> str:
+    """Short enough for a phone: "Today 9:46 AM", "Yesterday 6:02 PM", "Oct 21, 9:46 AM",
+    and the year only when it isn't this year ("Dec 30, 2025")."""
     if value is None:
         return "-"
     if value.tzinfo is None:              # stored as UTC without a zone
         value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(tz).strftime("%b %d, %Y %I:%M %p").replace(" 0", " ")
+    local = value.astimezone(tz)
+    today = datetime.now(tz).date()
+    clock = local.strftime("%I:%M %p").lstrip("0")
+    if local.date() == today:
+        return f"Today {clock}"
+    if local.date() == today - timedelta(days=1):
+        return f"Yesterday {clock}"
+    if local.year == today.year:
+        return f"{local.strftime('%b')} {local.day}, {clock}"
+    return f"{local.strftime('%b')} {local.day}, {local.year}"
 
 
 async def account_activity(tool_context: ToolContext) -> dict:
