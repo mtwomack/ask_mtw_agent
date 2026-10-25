@@ -70,6 +70,14 @@ limit :limit
 """
 
 
+def _account_cell(user_id: str) -> str:
+    """Emails become mailto links; <wbr> lets a long one wrap after the "@" on phones."""
+    safe = user_id.replace("|", "\\|").replace("[", "").replace("]", "")
+    if "@" in user_id and not any(c in user_id for c in " ()|[]<>"):
+        return f"[{safe.replace('@', '@<wbr>')}](mailto:{user_id})"
+    return safe                           # e.g. test:mark (sign-in off) - not an email
+
+
 def _fmt_time(value, tz: ZoneInfo) -> str:
     """Short enough for a phone: "Today 9:46 AM", "Yesterday 6:02 PM", "Oct 21, 9:46 AM",
     and the year only when it isn't this year ("Dec 30, 2025")."""
@@ -117,8 +125,7 @@ async def account_activity(tool_context: ToolContext) -> dict:
     zone = DISPLAY_TZ.split("/")[-1].replace("_", " ")     # e.g. "New York"
     lines = ["| Account | Sessions | Chats | Last chat |", "|---|---:|---:|---|"]
     for r in rows:
-        # <wbr> lets a long email wrap after the "@" on narrow phone screens
-        account = (r.user_id or "").replace("|", "\\|").replace("@", "@<wbr>")
+        account = _account_cell(r.user_id or "")
         lines.append(f"| {account} | {r.sessions} | {r.chats} | {_fmt_time(r.last_chat, tz)} |")
     return {
         "status": "success",
