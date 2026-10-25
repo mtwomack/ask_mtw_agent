@@ -354,6 +354,9 @@ textarea {
   .md table { font-size: 12.5px; }
   .md th, .md td { padding: 6px 6px; }
   .md th { letter-spacing: .02em; }
+  /* phones: let table cells wrap at spaces ("Oct 21," / "1:17 PM") instead of running off the
+     screen; words like email addresses still stay whole */
+  .md th, .md td { white-space: normal; overflow-wrap: normal; word-break: normal; }
   .composer { padding: 3px 5px; border-radius: 12px; gap: 2px 4px; align-items: center; }
   #attach, #send { width: 30px; height: 30px; border-radius: 8px; }
   #attach svg { width: 17px; height: 17px; }

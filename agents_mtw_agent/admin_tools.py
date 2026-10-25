@@ -117,7 +117,8 @@ async def account_activity(tool_context: ToolContext) -> dict:
     zone = DISPLAY_TZ.split("/")[-1].replace("_", " ")     # e.g. "New York"
     lines = ["| Account | Sessions | Chats | Last chat |", "|---|---:|---:|---|"]
     for r in rows:
-        account = (r.user_id or "").replace("|", "\\|")
+        # <wbr> lets a long email wrap after the "@" on narrow phone screens
+        account = (r.user_id or "").replace("|", "\\|").replace("@", "@<wbr>")
         lines.append(f"| {account} | {r.sessions} | {r.chats} | {_fmt_time(r.last_chat, tz)} |")
     return {
         "status": "success",
