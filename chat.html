@@ -85,16 +85,40 @@ aside {
 .sess:hover .x { opacity: 1; }
 .sess .x:hover { color: var(--down); }
 .note { color: var(--muted); font-size: 12px; padding: 8px; }
+/* profile picture in the header; click it for the account card (like Google's) */
 .who {
-  display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 260px;
-  color: var(--muted); font-size: 13px; white-space: nowrap;
+  flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: none;
+  display: grid; place-items: center; outline-offset: 2px;
 }
-.who:empty { display: none; }
-.who .initial {
-  flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
-  display: grid; place-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase;
+.who[hidden] { display: none; }
+.who:hover .pic, .who[aria-expanded="true"] .pic { box-shadow: 0 0 0 4px rgba(127,127,127,.18); }
+.pic {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-size: 14px; font-weight: 600; text-transform: uppercase;
+  overflow: hidden; flex: none; user-select: none;
 }
-.who .name { overflow: hidden; text-overflow: ellipsis; }
+.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pic.big { width: 80px; height: 80px; font-size: 34px; }
+.acct {
+  position: absolute; top: calc(100% + 6px); right: 12px; z-index: 30; width: min(340px, calc(100vw - 24px));
+  background: var(--side); color: var(--ink); border: 1px solid var(--line); border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08);
+  padding: 18px 16px 16px; text-align: center; animation: pop .14s ease-out;
+}
+.acct[hidden] { display: none; }
+.acct-email { font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; margin-bottom: 14px; }
+.acct-avatar { display: flex; justify-content: center; }
+.acct-hi { font-size: 21px; margin: 10px 0 2px; overflow-wrap: anywhere; }
+.acct-via { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; }
+.acct-via:empty { display: none; }
+.acct-signout {
+  width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 10px 16px;
+  font-size: 14px; font-weight: 600; color: var(--ink);
+}
+.acct-signout:hover { border-color: var(--accent); color: var(--accent); }
+.acct-signout[hidden] { display: none; }
+.acct-local { color: var(--muted); font-size: 12.5px; }
 .theme { flex: none; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .theme:hover { color: var(--ink); border-color: var(--accent); }
 
@@ -286,7 +310,6 @@ textarea {
   body.nav aside { transform: none; }
   header { padding: 8px 12px; gap: 8px; }
   #menu { display: block; }
-  .who .name { display: none; }
   #thread, footer { padding-left: 16px; padding-right: 16px; }
   .ideas { grid-template-columns: 1fr; }
   .msg.user .bubble { max-width: 90%; }
@@ -362,12 +385,6 @@ dialog.confirm::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur
 }
 
 /* ---------- sign in ---------- */
-.signout {
-  flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0;
-  border: 1px solid var(--line); background: var(--panel); border-radius: 8px; color: var(--muted);
-}
-.signout:hover { color: var(--ink); border-color: var(--accent); }
-.signout[hidden] { display: none; }
 #gate {
   position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
   background: var(--bg);
@@ -412,11 +429,18 @@ body.gated > aside, body.gated > main { visibility: hidden; }
   <header>
     <button id="menu" aria-label="Menu">☰</button>
     <div id="title">New chat</div>
-    <div class="who" id="who"></div>
     <button class="theme" type="button" title="Switch light / dark"></button>
-    <button class="signout" id="signout" type="button" title="Sign out" aria-label="Sign out" hidden>
-      <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17H4.5A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3H8M13 14l4-4-4-4M17 10H8"/></svg>
-    </button>
+    <button class="who" id="who" type="button" aria-haspopup="dialog" aria-expanded="false" hidden></button>
+    <div class="acct" id="acct" role="dialog" aria-label="Your account" hidden>
+      <div class="acct-email" id="acctEmail"></div>
+      <div class="acct-avatar" id="acctAvatar"></div>
+      <div class="acct-hi" id="acctHi"></div>
+      <div class="acct-via" id="acctVia"></div>
+      <button class="acct-signout" id="signout" type="button">
+        <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17H4.5A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3H8M13 14l4-4-4-4M17 10H8"/></svg>
+        Sign out</button>
+      <div class="acct-local" id="acctLocal" hidden>Sign-in is off on this computer (local mode).</div>
+    </div>
   </header>
   <div id="scroll">
     <div id="empty">
@@ -1109,8 +1133,37 @@ function showGate(message = "", email = "") {
 
 $("#gateAgain").onclick = () => location.reload();
 
+// ------------------------------------------------------------------ account card
+function setAccountMenu(open) {
+  const card = $("#acct"), btn = $("#who");
+  card.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+  if (open) (card.querySelector("button:not([hidden])") || btn).focus();
+}
+$("#who").onclick = (e) => { e.stopPropagation(); setAccountMenu($("#acct").hidden); };
+$("#acct").onclick = (e) => e.stopPropagation();
+document.addEventListener("click", () => { if (!$("#acct").hidden) setAccountMenu(false); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("#acct").hidden) { setAccountMenu(false); $("#who").focus(); }
+});
+
+// profile picture, or the first letter of the name on a coloured circle
+function avatar(name, picture, big = false) {
+  const el = document.createElement("span");
+  el.className = "pic" + (big ? " big" : "");
+  el.textContent = name.replace(/^.*:/, "").trim()[0] || "?";   // shown until (or unless) the photo loads
+  if (/^https:\/\//.test(picture || "")) {
+    const img = new Image();
+    img.alt = ""; img.referrerPolicy = "no-referrer";
+    img.onload = () => el.replaceChildren(img);
+    img.src = picture;
+  }
+  return el;
+}
+
 $("#signout").onclick = async () => {
   if (!AUTH.signout) return;
+  setAccountMenu(false);
   try { await fetch(AUTH.signout, { method: "POST" }); } catch {}
   sessionId = null;
   $("#sessions").replaceChildren();
@@ -1147,12 +1200,22 @@ $("#signout").onclick = async () => {
   const who = $("#who");
   const displayUser = typeof cfg.display_user === "string" ? cfg.display_user.trim() : "";
   if (who && displayUser) {
-    who.title = `Signed in as ${cfg.email || displayUser}${cfg.via ? ` (${cfg.via})` : ""}`;
-    who.innerHTML = '<span class="initial"></span><span class="name"></span>';
-    who.querySelector(".initial").textContent = displayUser.replace(/^.*:/, "")[0] || "?";
-    who.querySelector(".name").textContent = displayUser;
+    const email = cfg.email || "";
+    const plain = displayUser.replace(/^.*:/, "");            // "test:mark" -> "mark"
+    const first = plain.includes("@") ? plain.split("@")[0] : plain.split(/\s+/)[0];
+    const via = { google: "Google", microsoft: "Microsoft", github: "GitHub" }[cfg.via] || "";
+    who.title = `Account: ${displayUser}${email && email !== displayUser ? ` (${email})` : ""}`;
+    who.setAttribute("aria-label", who.title);
+    who.replaceChildren(avatar(displayUser, cfg.picture));
+    who.hidden = false;
+    $("#acctEmail").textContent = email || displayUser;
+    $("#acctAvatar").replaceChildren(avatar(displayUser, cfg.picture, true));
+    $("#acctHi").textContent = `Hi, ${first}!`;
+    $("#acctVia").textContent = via ? `Signed in with ${via}` : "";
   }
-  $("#signout").hidden = AUTH.mode === "off";
+  const local = AUTH.mode === "off";
+  $("#signout").hidden = local;
+  $("#acctLocal").hidden = !local;
   const startId = idFromUrl();
   if (startId) openSession(startId, { replaceUrl: true }); else loadSessions();
 })();
