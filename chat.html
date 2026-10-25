@@ -72,6 +72,21 @@ aside {
 }
 .new-chat:hover { border-color: var(--accent); }
 .list-label { color: var(--muted); font-size: 12px; font-weight: 600; padding: 4px 8px 0; text-transform: uppercase; letter-spacing: .06em; }
+/* search box above the chat list */
+.search {
+  display: flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; height: 36px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+}
+.search:focus-within { border-color: var(--accent); }
+.search input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font: inherit; font-size: 14px;
+}
+.search input::-webkit-search-cancel-button { display: none; }
+.search button { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+.search button:hover { color: var(--ink); }
+.search button[hidden] { display: none; }
+.sess[hidden] { display: none; }
+.sess .t mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0; }
 #sessions { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .sess {
   display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px;
@@ -428,6 +443,11 @@ body.gated > aside, body.gated > main { visibility: hidden; }
 <aside>
   <div class="brand"><div class="logo">Ponder</div><div><b>Ask Ponder</b><small>Your personal assistant</small></div></div>
   <button class="new-chat" id="newChat"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>New chat</button>
+  <div class="search">
+    <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.8 3.8"/></svg>
+    <input id="chatSearch" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off" spellcheck="false">
+    <button id="chatSearchClear" type="button" aria-label="Clear search" title="Clear" hidden>×</button>
+  </div>
   <div class="list-label">Recent</div>
   <div id="sessions"></div>
 </aside>
@@ -775,6 +795,41 @@ function when(ts) {
     : d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+// ------------------------------------------------------------------ search chats
+// Filters the chat list by title as you type (matches every word, any order, any case).
+let chatFilter = "";
+function applyChatFilter() {
+  const words = chatFilter.toLowerCase().split(/\s+/).filter(Boolean);
+  let shown = 0;
+  for (const b of $("#sessions").querySelectorAll(".sess")) {
+    const title = b.dataset.title || "";
+    const hit = words.every((w) => title.toLowerCase().includes(w));
+    b.hidden = !hit;
+    if (hit) shown++;
+    const t = b.querySelector(".t");
+    t.textContent = title;                                   // reset, then highlight matches
+    if (hit && words.length) {
+      const re = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+      t.replaceChildren(...title.split(re).map((part, i) =>
+        i % 2 ? Object.assign(document.createElement("mark"), { textContent: part }) : document.createTextNode(part)));
+    }
+  }
+  const total = $("#sessions").querySelectorAll(".sess").length;
+  let note = $("#sessions").querySelector(".no-match");
+  if (words.length && total && !shown) {
+    if (!note) { note = document.createElement("div"); note.className = "note no-match"; $("#sessions").append(note); }
+    note.textContent = `No chats match "${chatFilter.trim()}"`;
+  } else note?.remove();
+  $("#chatSearchClear").hidden = !chatFilter;
+  $(".list-label").textContent = words.length ? `Results (${shown})` : "Recent";
+}
+$("#chatSearch").addEventListener("input", (e) => { chatFilter = e.target.value; applyChatFilter(); });
+$("#chatSearch").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.target.value = chatFilter = ""; applyChatFilter(); }
+  if (e.key === "Enter") $("#sessions").querySelector(".sess:not([hidden])")?.click();   // open the first match
+});
+$("#chatSearchClear").onclick = () => { $("#chatSearch").value = chatFilter = ""; applyChatFilter(); $("#chatSearch").focus(); };
+
 async function loadSessions() {
   const list = $("#sessions");
   try {
@@ -787,10 +842,12 @@ async function loadSessions() {
       b.className = "sess" + (s.id === sessionId ? " active" : "");
       b.innerHTML = '<span class="t"></span><span class="d"></span><span class="x" title="Delete">×</span>';
       b.querySelector(".t").textContent = titleOf(s);
+      b.dataset.title = titleOf(s);
       b.querySelector(".d").textContent = when(s.lastUpdateTime);
       b.onclick = (e) => e.target.classList.contains("x") ? removeSession(s.id, titleOf(s)) : openSession(s.id);
       list.appendChild(b);
     }
+    applyChatFilter();                                       // keep the current search applied
   } catch (e) {
     list.innerHTML = `<div class="note">Couldn't load chats (${e.message})</div>`;
   }
