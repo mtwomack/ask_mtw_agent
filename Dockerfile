@@ -17,7 +17,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # App code only - no .env, no local data (see .gcloudignore)
-COPY main.py services.py auth.py chat.html ./
+COPY main.py services.py auth.py evals.py chat.html evals.html ./
 COPY agents_mtw_agent ./agents_mtw_agent
 
 # Non-root user

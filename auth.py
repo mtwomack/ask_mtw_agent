@@ -391,7 +391,7 @@ class AuthMiddleware:
 
 # ------------------------------------------------------------------ sign-in routes
 # Admin pages a browser may be sent back to after signing in.
-ADMIN_PAGES = ("/dev-ui/", "/docs")
+ADMIN_PAGES = ("/dev-ui/", "/docs", "/evals")
 
 
 def _safe_next(target: str | None) -> str:
@@ -407,6 +407,8 @@ def _admin_page(path: str) -> str | None:
         return "/dev-ui/"
     if path in ("/docs", "/redoc"):
         return "/docs"
+    if path == "/evals":
+        return "/evals"
     return None
 
 
@@ -522,7 +524,8 @@ async def chat_config(request: Request, app_name: str, dev_user: str) -> dict:
     """What the chat page needs: app, user, and how to sign in."""
     base = {"app_name": app_name, "auth": {"mode": MODE}}
     if MODE == "off":
-        return {**base, "signed_in": True, "user_id": "user", "display_user": dev_user}
+        return {**base, "signed_in": True, "user_id": "user", "display_user": dev_user,
+                "admin": True}       # sign-in off = only you, as with the admin tools
     base["auth"].update(signout="/auth/logout",
                         providers=[{"id": k, "name": p["name"]} for k, p in PROVIDERS.items()])
     who = await current_user(request)

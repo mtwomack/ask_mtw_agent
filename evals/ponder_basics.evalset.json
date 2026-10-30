@@ -1,0 +1,55 @@
+{
+  "eval_set_id": "ponder_basics",
+  "name": "Ponder basics",
+  "eval_cases": [
+    {
+      "eval_id": "greeting",
+      "conversation": [{
+        "user_content": {"role": "user", "parts": [{"text": "Hi, I'm Todd"}]},
+        "intermediate_data": {"tool_uses": [{"name": "greet_user", "args": {"name": "Todd"}}]},
+        "final_response": {"role": "model", "parts": [{"text": "Hello Todd! Welcome!"}]}
+      }],
+      "session_input": {"app_name": "agents_mtw_agent", "user_id": "eval@test", "state": {}}
+    },
+    {
+      "eval_id": "time_in_london",
+      "conversation": [{
+        "user_content": {"role": "user", "parts": [{"text": "What time is it in London?"}]},
+        "intermediate_data": {"tool_uses": [{"name": "get_current_time", "args": {"city": "London"}}]},
+        "final_response": {"role": "model", "parts": [{"text": "It's currently [the current time] in London."}]}
+      }],
+      "session_input": {"app_name": "agents_mtw_agent", "user_id": "eval@test", "state": {}}
+    },
+    {
+      "eval_id": "aapl_price",
+      "conversation": [{
+        "user_content": {"role": "user", "parts": [{"text": "What's AAPL trading at?"}]},
+        "intermediate_data": {"tool_uses": [{"name": "get_stock_price", "args": {"company": "AAPL"}}]},
+        "final_response": {"role": "model", "parts": [{"text": "Apple (AAPL) is trading at [the latest price], with the day's change. Quotes may be delayed."}]}
+      }],
+      "session_input": {"app_name": "agents_mtw_agent", "user_id": "eval@test", "state": {}}
+    },
+    {
+      "eval_id": "compare_two_tickers",
+      "conversation": [{
+        "user_content": {"role": "user", "parts": [{"text": "MSFT vs GOOGL today"}]},
+        "intermediate_data": {"tool_uses": [
+          {"name": "get_stock_price", "args": {"company": "MSFT"}},
+          {"name": "get_stock_price", "args": {"company": "GOOGL"}}
+        ]},
+        "final_response": {"role": "model", "parts": [{"text": "Microsoft (MSFT) and Alphabet class A (GOOGL) with each one's latest price and change today, and which one is up more. Quotes may be delayed."}]}
+      }],
+      "session_input": {"app_name": "agents_mtw_agent", "user_id": "eval@test", "state": {}}
+    },
+    {
+      "eval_id": "account_activity_not_admin",
+      "conversation": [{
+        "user_content": {"role": "user", "parts": [{"text": "Show me account activity"}]},
+        "intermediate_data": {"tool_uses": [{"name": "account_activity", "args": {}}]},
+        "final_response": {"role": "model", "parts": [{"text": "Account activity is only available to admins."}]}
+      }],
+      "session_input": {"app_name": "agents_mtw_agent", "user_id": "guest@example.com", "state": {}}
+    }
+  ],
+  "test_config": {"criteria": {"tool_trajectory_avg_score": 1.0, "final_response_match_v2": 0.8}}
+}

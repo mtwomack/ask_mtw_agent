@@ -3,6 +3,7 @@ Serves the ADK API plus a chat page for ask_mtw_agent.
 
     http://localhost:8000/chat     the chat UI (chat.html)
     http://localhost:8000/docs     Swagger for the ADK API
+    http://localhost:8000/evals    agent evals (admins only, see evals.py)
     /dev-ui                        adk web's dev UI, only if WITH_UI=1
 
 Local:      chat.cmd
@@ -16,6 +17,7 @@ Project layout:
     chat.html
     services.py          <- registers devpg:// and dbmem:// (imported below)
     auth.py              <- Google sign-in + entitlement
+    evals.py, evals.html <- the /evals page
     allowed_users.txt    <- optional list of who may sign in (see auth.py)
     <agent package>/     <- e.g. agents_mtw_agent/ (__init__.py, agent.py)
 """
@@ -29,6 +31,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 
 import services  # noqa: F401  registers the devpg / dbmem URI schemes, loads .env
 import auth      # after services: reads AUTH_MODE etc. from .env
+import evals     # the /evals page (admins only)
 from google.adk.cli.fast_api import get_fast_api_app
 
 HERE = Path(__file__).resolve().parent
@@ -50,6 +53,7 @@ app = get_fast_api_app(
     web=os.getenv("WITH_UI", "0") == "1",
 )
 auth.install(app, APP_NAME)    # sign-in routes + only entitled people, only their own chats
+evals.install(app, APP_NAME)   # /evals: run and review agent evals (admins only)
 
 
 @app.get("/chat", include_in_schema=False)

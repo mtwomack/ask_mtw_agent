@@ -107,6 +107,24 @@ Additional ADK CLI options can be passed through the launcher, for example:
 adkweb.cmd --log_level DEBUG
 ```
 
+## Agent evals (/evals)
+
+Admins can test the agent at `http://localhost:8000/evals` (or the account menu's **Evals** link).
+An eval set is a list of test conversations - what the user says, which tools the agent should call,
+and what a good answer looks like - in ADK's `.evalset.json` format. Runs score each case with ADK's
+own evaluators (the same as `adk eval`), and sets and results are kept in Postgres so you can compare runs.
+
+- **Add cases** from a chat (the flask icon next to a chat, or **+ From a chat**), or import an
+  `.evalset.json`. `evals/ponder_basics.evalset.json` is a starter set.
+- **Run** a set: pick how to score - tool calls must match, an LLM judge (Gemini) checks the answer
+  means the same, or word match. Use the judge for live prices and news; their numbers change.
+- **Results** show pass/fail per case, expected vs actual tool calls and answers, and cases that
+  passed last time but fail now (**Regressed**).
+- Who: emails in `ADMIN_EMAILS`; everyone when sign-in is off (local). Needs the Postgres session
+  store, and the LLM judge needs `GOOGLE_API_KEY`. One run at a time.
+- On Cloud Run, keep the page open while a run goes (its polling keeps the container awake),
+  or deploy with `--no-cpu-throttling` for long runs.
+
 ## Project layout
 
 ```text
@@ -120,7 +138,8 @@ ask_mtw_agent/
 |-- adkweb.cmd            Windows launcher for ADK web
 |-- agent.py              Agent, Ollama model, and example tools
 |-- dbtest.py             PostgreSQL connectivity check
-|-- eval_set_1.evalset.json ADK evaluation set (currently empty)
+|-- evals.py, evals.html  The /evals page (admins): eval sets, runs, results
+|-- evals/                Starter eval set to import
 |-- pyproject.toml        Project metadata and dependencies
 |-- readme.txt            Original quick-start notes
 |-- services.py           ADK session and memory service registration

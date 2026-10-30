@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evals - Ask Ponder</title>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --side: #efede6; --ink: #17171a; --muted: #6d6b66;
+  --line: #e2dfd6; --accent: #1f5fbf; --accent-ink: #ffffff; --accent-soft: #e6eefb;
+  --up: #0a8a0a; --down: #c23434; --warn: #a86a00; --code: #f1efe9; --head: #faf9f6;
+  --pass-bg: #e4f4e4; --fail-bg: #fbe5e5; --warn-bg: #fff1d6; --note-bg: #fff8ea; --note-line: #f0dcae;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131416; --panel: #1b1c1f; --side: #18191c; --ink: #ececea; --muted: #9a9892;
+    --line: #2c2d31; --accent: #6ea2f0; --accent-ink: #0b1220; --accent-soft: #1d2a3f;
+    --up: #4cc24c; --down: #f06b6b; --warn: #e6a945; --code: #232428; --head: #1f2023;
+    --pass-bg: #17301a; --fail-bg: #3a1c1c; --warn-bg: #3a2c12; --note-bg: #2b2414; --note-line: #4d4020;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+[hidden] { display: none !important; }
+
+header { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-weight: 700; text-decoration: none; flex: none; }
+header .name { font-weight: 650; font-size: 15px; }
+.crumb { color: var(--muted); }
+.tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sp { flex: 1; }
+.who { color: var(--muted); font-size: 12.5px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn { white-space: nowrap; border: 1px solid var(--line); background: var(--panel); border-radius: 9px;
+  padding: 6px 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.pri { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.pri:hover { filter: brightness(1.08); color: var(--accent-ink); }
+.btn.sm { padding: 3px 9px; font-size: 12.5px; }
+.btn.danger:hover { border-color: var(--down); color: var(--down); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.layout { display: flex; min-height: calc(100vh - 52px); }
+aside { width: 250px; flex: none; background: var(--side); border-right: 1px solid var(--line); padding: 14px 10px; }
+aside h4 { margin: 18px 8px 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.side-head { display: flex; justify-content: space-between; align-items: center; margin: 0 6px 10px; }
+.item { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; text-align: left;
+  border: 0; background: none; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+.item:hover { background: rgba(127,127,127,.10); }
+.item.on { background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.item .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item small { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.item small.up { color: var(--up); } .item small.down { color: var(--down); }
+
+main { flex: 1; min-width: 0; padding: 20px 24px 40px; }
+h2 { margin: 0; font-size: 20px; }
+.sub { color: var(--muted); margin: 2px 0 14px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.title-row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 6px 0 16px; }
+.tabs button { border: 0; background: none; padding: 8px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.card .k { font-size: 12px; color: var(--muted); }
+.card .v { font-size: 24px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.d { font-size: 12px; font-weight: 600; }
+.up { color: var(--up); } .down { color: var(--down); } .muted { color: var(--muted); }
+
+.progress { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; }
+.bar { height: 8px; background: var(--code); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
+.bar.scoring i { background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 8px, var(--accent-soft) 8px, var(--accent-soft) 16px); width: 100% !important; animation: slide 1s linear infinite; background-size: 22px 22px; }
+@keyframes slide { to { background-position: 22px 0; } }
+.msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; background: var(--note-bg); border: 1px solid var(--note-line); }
+.msg.err { background: var(--fail-bg); border-color: transparent; }
+
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); text-align: left; background: var(--head); font-weight: 600; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover td { background: rgba(127,127,127,.05); }
+tbody tr.sel td { background: var(--accent-soft); }
+.q { font-weight: 500; }
+.qs { color: var(--muted); font-size: 12.5px; max-width: 460px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pass { background: var(--pass-bg); color: var(--up); }
+.fail { background: var(--fail-bg); color: var(--down); }
+.reg { background: var(--warn-bg); color: var(--warn); }
+.na { background: var(--code); color: var(--muted); }
+.low { color: var(--down); font-weight: 600; }
+.chip { display: inline-block; font: 11.5px ui-monospace, Consolas, monospace; background: var(--code); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 0 0; }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { color: var(--ink); margin-bottom: 6px; }
+
+/* drawer */
+.drawer { position: fixed; top: 52px; right: 0; bottom: 0; width: min(460px, 100vw); background: var(--panel);
+  border-left: 1px solid var(--line); box-shadow: -8px 0 30px rgba(0,0,0,.08); padding: 18px; overflow-y: auto; z-index: 15; }
+.drawer h3 { margin: 0; font-size: 16px; }
+.lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+.turn-h { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-weight: 600; }
+.tr { font: 12.5px/1.7 ui-monospace, Consolas, monospace; background: var(--code); border-radius: 8px; padding: 8px 10px; overflow-x: auto; }
+.tr div { white-space: pre-wrap; word-break: break-word; }
+.tr .ok::before { content: "✓ "; color: var(--up); }
+.tr .bad::before { content: "✗ "; color: var(--down); }
+.tr .miss { color: var(--down); }
+.tr .none { color: var(--muted); }
+.resp { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto; }
+.judge { background: var(--note-bg); border: 1px solid var(--note-line); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 6px; }
+.x { border: 0; background: none; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 4px; }
+
+/* dialogs */
+dialog { border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--panel); color: var(--ink);
+  width: min(620px, calc(100vw - 24px)); max-height: calc(100vh - 40px); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 42px); }
+.dh { padding: 16px 18px 6px; display: flex; justify-content: space-between; align-items: center; }
+.dh h3 { margin: 0; font-size: 17px; }
+.db { padding: 6px 18px 12px; overflow-y: auto; }
+.df { padding: 12px 18px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
+label.f { display: block; font-size: 12.5px; font-weight: 600; margin: 10px 0 4px; }
+label.f small { font-weight: 400; color: var(--muted); }
+.in { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--panel); }
+.in:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+textarea.in { min-height: 120px; resize: vertical; font: 12.5px/1.5 ui-monospace, Consolas, monospace; }
+textarea.in.big { min-height: 340px; }
+.metric { display: grid; grid-template-columns: 22px 1fr 86px; gap: 8px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.metric:last-child { border-bottom: 0; }
+.metric b { font-weight: 600; }
+.metric .h { color: var(--muted); font-size: 12.5px; }
+.metric input[type=number] { width: 86px; }
+.err-line { color: var(--down); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+.chatlist { max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+.chatlist button { display: flex; justify-content: space-between; gap: 10px; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 9px 12px; text-align: left; cursor: pointer; }
+.chatlist button:last-child { border-bottom: 0; }
+.chatlist button:hover { background: rgba(127,127,127,.07); }
+.chatlist small { color: var(--muted); flex: none; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  padding: 9px 16px; border-radius: 10px; z-index: 50; font-size: 13.5px; box-shadow: var(--shadow); }
+
+@media (max-width: 860px) {
+  .layout { flex-direction: column; }
+  aside { width: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px; }
+  aside .list { display: flex; gap: 6px; overflow-x: auto; }
+  aside .item { width: auto; flex: none; }
+  aside h4 { margin-top: 10px; }
+  main { padding: 16px 12px 40px; }
+  .who { display: none; }
+  header { gap: 8px; padding: 0 12px; }
+  header .crumb { color: var(--ink); font-weight: 650; font-size: 15px; }
+  .hide-sm { display: none; }
+  th, td { padding: 8px 8px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/chat" title="Back to chat">P</a>
+  <span class="name hide-sm">Ask Ponder</span><span class="crumb"><span class="hide-sm">/ </span>Evals</span><span class="tag">Admin</span>
+  <span class="sp"></span>
+  <span class="who" id="who"></span>
+  <a class="btn" href="/chat">Back to chat</a>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="side-head"><b>Eval sets</b><button class="btn sm" id="newSetBtn">+ New</button></div>
+    <div class="list" id="sets"></div>
+    <div id="runsBox" hidden>
+      <h4>Runs</h4>
+      <div class="list" id="runs"></div>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<div class="drawer" id="drawer" hidden></div>
+
+<!-- new set -->
+<dialog id="dlgSet"><form method="dialog">
+  <div class="dh"><h3>New eval set</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
+  <div class="db">
+    <label class="f">Set ID <small>letters, numbers, _ . - · e.g. quotes</small></label>
+    <input class="in" id="setId" required pattern="[A-Za-z0-9_][A-Za-z0-9_.\-]{0,79}" placeholder="quotes">
+    <label class="f">Name <small>optional</small></label>
+    <input class="in" id="setName" placeholder="Quotes &amp; prices">
+    <div class="err-line" id="setErr"></div>
+  </div>
+  <div class="df"><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="setSave" value="default">Create</button></div>
+</form></dialog>
+
+<!-- run -->
+<dialog id="dlgRun"><form method="dialog">
+  <div class="dh"><h3 id="runTitle">Run eval set</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
+  <div class="db">
+    <div class="sub" id="runWhat"></div>
+    <div class="lbl">How to score <small class="muted" style="text-transform:none;letter-spacing:0">(a case passes if it meets every threshold)</small></div>
+    <div id="runMetrics"></div>
+    <label class="f">Label <small>optional · e.g. "prompt v1.8" or "after tool rename"</small></label>
+    <input class="in" id="runLabel" maxlength="80">
+    <div class="err-line" id="runErr"></div>
+  </div>
+  <div class="df"><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="runGo" value="default">▶ Run</button></div>
+</form></dialog>
+
+<!-- import -->
+<dialog id="dlgImport"><form method="dialog">
+  <div class="dh"><h3>Import cases</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
+  <div class="db">
+    <div class="sub">An ADK <b>.evalset.json</b> - from <code>adk eval</code>, the dev UI's Eval tab or an export from here. Cases with the same ID are replaced.</div>
+    <label class="f">File</label>
+    <input class="in" type="file" id="impFile" accept=".json,application/json">
+    <label class="f">…or paste the JSON</label>
+    <textarea class="in" id="impText" placeholder='{"eval_set_id": "quotes", "eval_cases": [ ... ]}'></textarea>
+    <label class="f">test_config.json <small>optional · sets the scoring, e.g. {"criteria": {"tool_trajectory_avg_score": 1.0}}</small></label>
+    <textarea class="in" id="impCfg" style="min-height:60px"></textarea>
+    <div class="err-line" id="impErr"></div>
+  </div>
+  <div class="df"><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="impGo" value="default">Import</button></div>
+</form></dialog>
+
+<!-- case from a chat -->
+<dialog id="dlgChat"><form method="dialog">
+  <div class="dh"><h3>Add a case from a chat</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
+  <div class="db">
+    <div id="chatPick">
+      <div class="sub">Pick one of your chats. Its messages, the tools the agent called and its answers become what's expected.</div>
+      <div class="chatlist" id="chatList"></div>
+    </div>
+    <div id="chatPreview" hidden>
+      <div class="sub" id="chatFrom"></div>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1;min-width:180px"><label class="f">Add to set</label><select class="in" id="chatSet"></select></div>
+        <div style="flex:1;min-width:180px"><label class="f">Case ID</label><input class="in" id="chatCaseId"></div>
+      </div>
+      <label class="f">Run as user <small>user_id · admins can use admin-only tools</small></label>
+      <input class="in" id="chatUser">
+      <div id="chatTurns"></div>
+      <div class="msg" style="margin-top:12px">Check the expected answer - live prices and news change, so for those cases score with the <b>LLM judge</b> rather than word match.</div>
+    </div>
+    <div class="err-line" id="chatErr"></div>
+  </div>
+  <div class="df"><button class="btn" value="cancel">Cancel</button><button class="btn" id="chatBack" type="button" hidden>Pick another chat</button><button class="btn pri" id="chatSave" value="default" hidden>Save case</button></div>
+</form></dialog>
+
+<!-- edit a case as JSON -->
+<dialog id="dlgCase"><form method="dialog">
+  <div class="dh"><h3 id="caseTitle">Edit case</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
+  <div class="db">
+    <div class="sub">The case in ADK's eval format: <code>conversation</code> (each turn's <code>user_content</code>, expected <code>intermediate_data.tool_uses</code> and <code>final_response</code>) and <code>session_input</code> (who it runs as, starting state).</div>
+    <textarea class="in big" id="caseJson" spellcheck="false"></textarea>
+    <div class="err-line" id="caseErr"></div>
+  </div>
+  <div class="df"><button class="btn danger" id="caseDel" type="button">Delete case</button><span class="sp"></span><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="caseSave" value="default">Save</button></div>
+</form></dialog>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const METRIC_SHORT = {
+  tool_trajectory_avg_score: "Tool calls", final_response_match_v2: "Answer (judge)",
+  response_match_score: "Word match", hallucinations_v1: "Grounded",
+  rubric_based_final_response_quality_v1: "Rubric", rubric_based_tool_use_quality_v1: "Tool rubric",
+  safety_v1: "Safety",
+};
+let INFO = null, SETS = [], SET = null, RUN = null, VIEW = "run", SELECTED_CASE = null, pollTimer = null;
+
+// ------------------------------------------------------------------ helpers
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el[k] = v;
+    else if (k === "text") el.textContent = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false)
+    el.append(kid instanceof Node ? kid : String(kid));
+  return el;
+}
+async function call(path, opts = {}) {
+  const res = await fetch("/evals/api" + path, { headers: { "Content-Type": "application/json" }, ...opts });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (res.status === 401) { location.href = "/chat?next=/evals"; throw new Error("Please sign in."); }
+  if (!res.ok) throw new Error((data && (data.detail || data.message)) || `HTTP ${res.status}`);
+  return data;
+}
+const post = (p, body, method = "POST") => call(p, { method, body: JSON.stringify(body || {}) });
+const enc = encodeURIComponent;
+function toast(msg) {
+  const t = h("div", { class: "toast", text: msg }); document.body.append(t);
+  setTimeout(() => t.remove(), 3500);
+}
+function when(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), now = new Date();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return `Today ${time}`;
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return `Yesterday ${time}`;
+  return d.toLocaleDateString([], { month: "short", day: "numeric", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) });
+}
+const fmt = (x, digits = 2) => (typeof x === "number" ? x.toFixed(digits) : "–");
+const short = (name) => METRIC_SHORT[name] || name.replace(/_v\d+$/, "").replace(/_/g, " ");
+function argsText(args) {
+  return Object.entries(args || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+}
+const callText = (c) => `${c.name}(${argsText(c.args)})`;
+const sameCall = (a, b) => a && b && a.name === b.name && JSON.stringify(sortKeys(a.args)) === JSON.stringify(sortKeys(b.args));
+function sortKeys(o) { return Object.fromEntries(Object.entries(o || {}).sort(([a], [b]) => a.localeCompare(b))); }
+function statusPill(r) {
+  if (r.regressed) return h("span", { class: "pill reg", text: "Regressed" });
+  if (r.status === "passed") return h("span", { class: "pill pass", text: "Pass" });
+  if (r.status === "failed") return h("span", { class: "pill fail", text: "Fail" });
+  if (r.status === "error") return h("span", { class: "pill fail", text: "Error" });
+  return h("span", { class: "pill na", text: "Not scored" });
+}
+function setUrl() {
+  const q = new URLSearchParams();
+  if (SET) q.set("set", SET.eval_set_id);
+  if (RUN) q.set("run", RUN.run_id);
+  if (VIEW === "cases") q.set("view", "cases");
+  history.replaceState(null, "", "/evals" + (q.toString() ? "?" + q : ""));
+}
+
+// ------------------------------------------------------------------ sidebar
+async function loadSets() {
+  SETS = await call("/sets");
+  const box = $("#sets"); box.replaceChildren();
+  if (!SETS.length) box.append(h("div", { class: "muted", style: "padding:4px 10px;font-size:13px", text: "No eval sets yet." }));
+  for (const s of SETS) {
+    const lr = s.last_run;
+    const tail = lr && lr.status === "done" ? h("small", { class: lr.passed === lr.total ? "up" : "down", text: `${lr.passed}/${lr.total}` })
+      : h("small", { text: `${s.cases} case${s.cases === 1 ? "" : "s"}` });
+    box.append(h("button", { class: "item" + (SET && SET.eval_set_id === s.eval_set_id ? " on" : ""),
+      onclick: () => openSet(s.eval_set_id) }, h("span", { class: "t", text: s.name }), tail));
+  }
+}
+function renderRuns() {
+  const box = $("#runs"); box.replaceChildren();
+  $("#runsBox").hidden = !SET || !SET.runs.length;
+  for (const r of SET ? SET.runs : []) {
+    const tail = r.status === "running" ? h("small", { text: "running…" })
+      : r.status === "done" ? h("small", { class: r.passed === r.total ? "up" : "down", text: `${r.passed}/${r.total}` })
+      : h("small", { class: "down", text: r.status });
+    box.append(h("button", { class: "item" + (RUN && RUN.run_id === r.run_id && VIEW === "run" ? " on" : ""),
+      title: r.label || "", onclick: () => openRun(r.run_id) },
+      h("span", { class: "t", text: `#${r.run_id} · ${when(r.started_at)}` }), tail));
+  }
+}
+
+// ------------------------------------------------------------------ main views
+async function openSet(id, opts = {}) {
+  closeDrawer();
+  SET = await call(`/sets/${enc(id)}`);
+  RUN = null;
+  VIEW = opts.view || (SET.runs.length ? "run" : "cases");
+  await loadSets();
+  if (VIEW === "run" && SET.runs.length) await openRun(opts.run || SET.runs[0].run_id);
+  else { renderRuns(); renderMain(); }
+}
+async function openRun(runId) {
+  closeDrawer();
+  RUN = await call(`/runs/${runId}`);
+  VIEW = "run";
+  renderRuns(); renderMain();
+  schedulePoll();
+}
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  if (RUN && RUN.status === "running") pollTimer = setTimeout(async () => {
+    try {
+      const fresh = await call(`/runs/${RUN.run_id}`);
+      const finished = fresh.status !== "running";
+      RUN = fresh;
+      if (finished) { SET = await call(`/sets/${enc(SET.eval_set_id)}`); await loadSets(); renderRuns(); }
+      if (VIEW === "run") renderMain();
+      schedulePoll();
+    } catch (e) { schedulePoll(); }
+  }, 2000);
+}
+
+function renderMain() {
+  setUrl();
+  const main = $("#main"); main.replaceChildren();
+  if (!SET) return renderWelcome(main);
+  const cases = SET.cases.length;
+  main.append(h("div", { class: "title-row" },
+    h("div", {}, h("h2", { text: SET.name }),
+      h("div", { class: "sub", text: `${cases} case${cases === 1 ? "" : "s"} · set ID ${SET.eval_set_id}` })),
+    h("div", { class: "row" },
+      h("button", { class: "btn", onclick: () => openChatDialog() }, "+ From a chat"),
+      h("button", { class: "btn", onclick: openImport }, "Import"),
+      h("a", { class: "btn hide-sm", href: `/evals/api/sets/${enc(SET.eval_set_id)}/export` }, "Export"),
+      h("button", { class: "btn danger hide-sm", onclick: deleteSet }, "Delete set"),
+      h("button", { class: "btn pri", onclick: () => openRunDialog(), disabled: !cases || runningRun() }, "▶ Run"))));
+  main.append(h("div", { class: "tabs" },
+    h("button", { class: VIEW === "run" ? "on" : "", disabled: !SET.runs.length, onclick: () => SET.runs.length && openRun((RUN || SET.runs[0]).run_id) },
+      RUN ? `Run #${RUN.run_id}` : "Results"),
+    h("button", { class: VIEW === "cases" ? "on" : "", onclick: () => { VIEW = "cases"; closeDrawer(); renderRuns(); renderMain(); } }, `Cases (${cases})`)));
+  if (VIEW === "cases" || !RUN) return renderCases(main);
+  renderRun(main);
+}
+const runningRun = () => (SET && SET.runs.some((r) => r.status === "running")) || false;
+
+function renderWelcome(main) {
+  main.append(h("div", { class: "empty" },
+    h("h2", { text: "Test your agent with evals" }),
+    h("p", {}, "An eval set is a list of test conversations: what the user says, which tools Ponder should call, and what a good answer looks like.", h("br"),
+      "Create a set, add cases from your chats or import an ADK ", h("code", { text: ".evalset.json" }), ", then run it after every prompt or tool change."),
+    h("button", { class: "btn pri", onclick: () => $("#newSetBtn").click() }, "+ New eval set")));
+}
+
+function renderCases(main) {
+  if (!SET.cases.length) {
+    main.append(h("div", { class: "empty" }, h("p", {}, "No cases in this set yet."),
+      h("div", { class: "row", style: "justify-content:center" },
+        h("button", { class: "btn pri", onclick: () => openChatDialog() }, "+ Add from a chat"),
+        h("button", { class: "btn", onclick: openImport }, "Import .evalset.json"))));
+    return;
+  }
+  const body = h("tbody");
+  for (const c of SET.cases) {
+    body.append(h("tr", { class: "click", onclick: () => editCase(c.eval_id) },
+      h("td", {}, h("div", { class: "q", text: c.eval_id }), h("div", { class: "qs", text: `"${c.user}"` })),
+      h("td", {}, c.tools.length ? c.tools.map((t) => h("span", { class: "chip", text: t })) : h("span", { class: "muted", text: "no tools" })),
+      h("td", { class: "n", text: c.turns }),
+      h("td", { class: "n hide-sm", text: when(c.updated_at) })));
+  }
+  main.append(h("div", { class: "tablewrap" }, h("table", {},
+    h("thead", {}, h("tr", {}, h("th", { text: "Case" }), h("th", { text: "Expected tools" }), h("th", { class: "n", text: "Turns" }), h("th", { class: "n hide-sm", text: "Updated" }))),
+    body)));
+}
+
+// Columns in the order the run dialog lists them (the database doesn't keep key order).
+function orderedMetrics(criteria) {
+  const order = (INFO.metrics || []).map((m) => m.name);
+  const rank = (n) => (order.includes(n) ? order.indexOf(n) : 99);
+  return Object.keys(criteria || {}).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+function renderRun(main) {
+  const r = RUN;
+  const metricNames = orderedMetrics(r.criteria);
+  const sub = [r.model && `model ${r.model}`, r.label, `${r.total} case${r.total === 1 ? "" : "s"}`,
+    r.finished_at && `${Math.max(1, Math.round((new Date(r.finished_at) - new Date(r.started_at)) / 1000))}s`,
+    r.started_by && `by ${r.started_by}`].filter(Boolean).join(" · ");
+  main.append(h("div", { class: "sub", style: "margin-top:-8px", text: `${when(r.started_at)} · ${sub}` }));
+
+  if (r.status === "running") {
+    const scoring = r.phase === "scoring";
+    main.append(h("div", { class: "progress" },
+      h("b", { text: scoring ? "Scoring answers…" : `Running cases… ${r.done} of ${r.total}` }),
+      h("span", { class: "muted", text: scoring ? "  (the LLM judge checks each answer)" : "  (each case talks to the agent)" }),
+      h("div", { class: "bar" + (scoring ? " scoring" : "") }, h("i", { style: `width:${r.total ? (100 * r.done / r.total) : 0}%` }))));
+  } else if (r.status === "error" || r.status === "interrupted") {
+    main.append(h("div", { class: "msg err" }, h("b", { text: r.status === "error" ? "The run failed. " : "The run was cut off. " }), r.message || ""));
+  }
+
+  // A metric that couldn't be scored (e.g. the LLM judge had no API key or hit a quota) is
+  // left out of pass/fail by ADK - say so, or a "Pass" would look better than it is.
+  const unscored = {};
+  for (const res of r.results) for (const m of res.metrics || [])
+    if (m.status === "not_evaluated") unscored[m.name] = (unscored[m.name] || 0) + 1;
+  const names = Object.keys(unscored);
+  if (names.length) main.append(h("div", { class: "msg" },
+    h("b", { text: "Not everything was scored. " }),
+    names.map((n) => `${short(n)}: ${unscored[n]} of ${r.results.length} not scored`).join(" · ") + ". ",
+    "Those cases passed or failed on the other checks only. For the LLM judge, check GOOGLE_API_KEY and your Gemini quota, then run again."));
+
+  if (r.status === "done") {
+    const prev = r.previous;
+    const cards = h("div", { class: "cards" });
+    const delta = (now, before, digits, pct) => {
+      if (typeof now !== "number" || typeof before !== "number") return null;
+      const d = now - before; if (Math.abs(d) < 1e-9) return h("div", { class: "d muted", text: "no change" });
+      return h("div", { class: "d " + (d > 0 ? "up" : "down"), text: `${d > 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(digits)}${pct || ""}` });
+    };
+    cards.append(h("div", { class: "card" }, h("div", { class: "k", text: "Passed" }),
+      h("div", { class: "v", text: `${r.passed}/${r.total}` }),
+      prev ? delta(r.passed, prev.passed, 0, ` vs run #${prev.run_id}`) : h("div", { class: "d muted", text: "first run" })));
+    for (const m of metricNames) {
+      cards.append(h("div", { class: "card" }, h("div", { class: "k", text: `${short(m)} · avg` }),
+        h("div", { class: "v", text: fmt(r.averages[m]) }),
+        prev ? delta(r.averages[m], (prev.metrics || {})[m], 2) : h("div", { class: "d muted", text: `pass ≥ ${r.criteria[m]}` })));
+    }
+    if (r.tokens) cards.append(h("div", { class: "card" }, h("div", { class: "k", text: "Tokens (agent)" }),
+      h("div", { class: "v", text: Number(r.tokens).toLocaleString() }),
+      prev && prev.tokens ? delta(Number(r.tokens) / 1000, Number(prev.tokens) / 1000, 1, "k") : null));
+    main.append(cards);
+  }
+
+  if (!r.results.length) return;
+  const body = h("tbody");
+  for (const res of r.results) {
+    const byName = Object.fromEntries((res.metrics || []).map((m) => [m.name, m]));
+    const firstUser = res.turns && res.turns[0] ? res.turns[0].user : "";
+    body.append(h("tr", { class: "click" + (SELECTED_CASE === res.eval_id ? " sel" : ""), onclick: () => showResult(res.eval_id) },
+      h("td", {}, h("div", { class: "q", text: res.eval_id }), firstUser ? h("div", { class: "qs", text: `"${firstUser}"` }) : null),
+      h("td", {}, statusPill(res)),
+      metricNames.map((m) => {
+        const x = byName[m];
+        if (x && x.status === "not_evaluated") return h("td", { class: "n muted", title: "Not scored", text: "n/a" });
+        return h("td", { class: "n " + (x && x.status === "failed" ? "low" : ""), text: x ? fmt(x.score) : "–" });
+      }),
+      h("td", { class: "n hide-sm", text: typeof res.seconds === "number" ? `${res.seconds.toFixed(1)}s` : "–" })));
+  }
+  main.append(h("div", { class: "tablewrap" }, h("table", {},
+    h("thead", {}, h("tr", {}, h("th", { text: "Case" }), h("th", { text: "Result" }),
+      metricNames.map((m) => h("th", { class: "n", text: short(m) })), h("th", { class: "n hide-sm", text: "Time / turn" }))),
+    body)));
+}
+
+// ------------------------------------------------------------------ result detail
+function closeDrawer() { $("#drawer").hidden = true; SELECTED_CASE = null; document.querySelectorAll("tr.sel").forEach((t) => t.classList.remove("sel")); }
+function showResult(evalId) {
+  const res = RUN.results.find((x) => x.eval_id === evalId);
+  if (!res) return;
+  SELECTED_CASE = evalId;
+  document.querySelectorAll("tbody tr").forEach((t) => t.classList.toggle("sel", t.querySelector(".q")?.textContent === evalId));
+  const d = $("#drawer"); d.replaceChildren(); d.hidden = false;
+  d.append(h("div", { class: "row", style: "justify-content:space-between;flex-wrap:nowrap" },
+    h("h3", { text: res.eval_id }), h("div", { class: "row" }, statusPill(res), h("button", { class: "x", onclick: closeDrawer, "aria-label": "Close" }, "×"))));
+  const note = res.regressed ? `Passed in run #${RUN.previous.run_id} - fails now.`
+    : res.previous ? `Run #${RUN.previous.run_id}: ${res.previous.status}` : "";
+  if (note) d.append(h("div", { class: "sub", text: note }));
+  if (res.error) d.append(h("div", { class: "msg err", text: res.error }));
+  if ((res.metrics || []).length) d.append(h("div", { class: "row", style: "margin-top:8px" },
+    res.metrics.map((m) => h("span", { class: "pill " + (m.status === "passed" ? "pass" : m.status === "failed" ? "fail" : "na"),
+      text: m.status === "not_evaluated" ? `${short(m.name)}: not scored`
+        : `${short(m.name)} ${fmt(m.score)}${typeof m.threshold === "number" ? ` / ${m.threshold}` : ""}` }))));
+
+  (res.turns || []).forEach((t, i) => {
+    if (res.turns.length > 1) d.append(h("div", { class: "turn-h", text: `Turn ${i + 1}` }));
+    d.append(h("div", { class: "lbl", text: "User asked" }), h("div", { class: "resp", text: t.user }));
+    d.append(h("div", { class: "lbl", text: "Tool calls - expected vs actual" }));
+    const tr = h("div", { class: "tr" });
+    const n = Math.max(t.expected_tools.length, t.actual_tools.length);
+    if (!n) tr.append(h("div", { class: "none", text: "No tools expected, none called." }));
+    for (let k = 0; k < n; k++) {
+      const e = t.expected_tools[k], a = t.actual_tools[k];
+      if (sameCall(e, a)) tr.append(h("div", { class: "ok", text: callText(a) }));
+      else {
+        if (a) tr.append(h("div", { class: "bad" }, callText(a), h("span", { class: "miss", text: e ? `  ← expected ${callText(e)}` : "  ← not expected" })));
+        else tr.append(h("div", { class: "bad" }, h("span", { class: "miss", text: `missing: ${callText(e)}` })));
+      }
+    }
+    d.append(tr);
+    if (t.expected_answer) d.append(h("div", { class: "lbl", text: "Expected answer" }), h("div", { class: "resp", text: t.expected_answer }));
+    d.append(h("div", { class: "lbl", text: "Actual answer" }), h("div", { class: "resp", text: t.actual_answer || "(no answer)" }));
+    if ((t.reasons || []).length) {
+      d.append(h("div", { class: "lbl", text: "LLM judge" }));
+      for (const r of t.reasons) d.append(h("div", { class: "judge", text: `${typeof r.score === "number" ? `(${r.score}) ` : ""}${r.text}` }));
+    }
+  });
+  const inSet = SET.cases.some((c) => c.eval_id === evalId);
+  d.append(h("div", { class: "row", style: "margin-top:18px" },
+    inSet ? h("button", { class: "btn", onclick: () => editCase(evalId) }, "Edit case") : null,
+    inSet ? h("button", { class: "btn", onclick: () => openRunDialog([evalId]), disabled: runningRun() }, "Re-run case") : null,
+    !inSet ? h("span", { class: "muted", text: "This case has since been removed from the set." }) : null));
+}
+
+// ------------------------------------------------------------------ dialogs
+function errorTo(id, e) { $(id).textContent = e ? (e.message || String(e)) : ""; }
+function modal(dlg, onOk) {
+  // Runs onOk on the primary button; keeps the dialog open (with the error) if it throws.
+  dlg.querySelector("form").onsubmit = async (ev) => {
+    if (ev.submitter && ev.submitter.value === "cancel") return;
+    ev.preventDefault();
+    const btn = ev.submitter; if (btn) btn.disabled = true;
+    try { await onOk(); dlg.close(); } catch (e) { const el = dlg.querySelector(".err-line"); if (el) el.textContent = e.message; }
+    finally { if (btn) btn.disabled = false; }
+  };
+  dlg.querySelectorAll(".err-line").forEach((el) => (el.textContent = ""));
+  dlg.showModal();
+}
+
+$("#newSetBtn").onclick = () => {
+  $("#setId").value = ""; $("#setName").value = "";
+  modal($("#dlgSet"), async () => {
+    const id = $("#setId").value.trim();
+    await post("/sets", { eval_set_id: id, name: $("#setName").value.trim() });
+    await openSet(id, { view: "cases" });
+    toast("Set created - add cases from a chat or import a file.");
+  });
+};
+
+async function deleteSet() {
+  if (!confirm(`Delete the set "${SET.name}", its ${SET.cases.length} cases and all its runs?`)) return;
+  await call(`/sets/${enc(SET.eval_set_id)}`, { method: "DELETE" });
+  SET = null; RUN = null; closeDrawer(); await loadSets(); renderRuns(); renderMain();
+}
+
+function openRunDialog(onlyIds) {
+  const crit = { ...(SET.criteria && Object.keys(SET.criteria).length ? SET.criteria : INFO.default_criteria) };
+  $("#runTitle").textContent = onlyIds ? `Re-run ${onlyIds[0]}` : `Run ${SET.name}`;
+  $("#runWhat").textContent = onlyIds ? "Runs just this case." :
+    `Runs all ${SET.cases.length} case${SET.cases.length === 1 ? "" : "s"} through the agent, then scores them.`;
+  const box = $("#runMetrics"); box.replaceChildren();
+  const known = new Set(INFO.metrics.map((m) => m.name));
+  for (const m of INFO.metrics) {
+    const on = m.name in crit;
+    const val = typeof crit[m.name] === "number" ? crit[m.name] : m.default;
+    box.append(h("label", { class: "metric" },
+      h("input", { type: "checkbox", "data-m": m.name, checked: on }),
+      h("div", {}, h("b", { text: m.label }), h("div", { class: "h", text: m.help })),
+      h("input", { class: "in", type: "number", min: "0", max: "1", step: "0.05", value: val, "data-t": m.name, title: "Pass if the score is at least this" })));
+  }
+  for (const [name, v] of Object.entries(crit)) if (!known.has(name))    // e.g. rubrics from an imported file
+    box.append(h("label", { class: "metric" }, h("input", { type: "checkbox", "data-m": name, "data-raw": JSON.stringify(v), checked: true }),
+      h("div", {}, h("b", { text: short(name) }), h("div", { class: "h", text: "From the imported test_config.json" })), h("span")));
+  $("#runLabel").value = "";
+  modal($("#dlgRun"), async () => {
+    const criteria = {};
+    box.querySelectorAll("input[data-m]").forEach((cb) => {
+      if (!cb.checked) return;
+      const name = cb.dataset.m;
+      criteria[name] = cb.dataset.raw ? JSON.parse(cb.dataset.raw) : parseFloat(box.querySelector(`input[data-t="${name}"]`).value);
+    });
+    if (!Object.keys(criteria).length) throw new Error("Pick at least one way to score.");
+    const { run_id } = await post(`/sets/${enc(SET.eval_set_id)}/runs`, { criteria, label: $("#runLabel").value, eval_ids: onlyIds || null });
+    SET = await call(`/sets/${enc(SET.eval_set_id)}`);
+    await loadSets();
+    await openRun(run_id);
+  });
+}
+
+function openImport() {
+  $("#impFile").value = ""; $("#impText").value = ""; $("#impCfg").value = "";
+  modal($("#dlgImport"), async () => {
+    let text = $("#impText").value.trim();
+    const file = $("#impFile").files[0];
+    if (file) text = await file.text();
+    if (!text) throw new Error("Choose a file or paste the JSON.");
+    let evalset, criteria = null;
+    try { evalset = JSON.parse(text); } catch (e) { throw new Error("That isn't valid JSON: " + e.message); }
+    if (evalset.test_config) criteria = evalset.test_config;                 // an export from this page
+    const cfg = $("#impCfg").value.trim();
+    if (cfg) { try { criteria = JSON.parse(cfg); } catch (e) { throw new Error("test_config.json isn't valid JSON: " + e.message); } }
+    const r = await post(`/sets/${enc(SET.eval_set_id)}/import`, { evalset, criteria });
+    await openSet(SET.eval_set_id, { view: "cases" });
+    toast(`Imported: ${r.added} new, ${r.updated} replaced${r.criteria_updated ? " · scoring updated" : ""}.`);
+  });
+}
+
+async function editCase(evalId) {
+  const data = await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`);
+  $("#caseTitle").textContent = `Edit case · ${evalId}`;
+  $("#caseJson").value = JSON.stringify(data, null, 2);
+  $("#caseDel").onclick = async () => {
+    if (!confirm(`Delete the case ${evalId}?`)) return;
+    await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`, { method: "DELETE" });
+    $("#dlgCase").close(); await openSet(SET.eval_set_id, { view: "cases" }); toast("Case deleted.");
+  };
+  modal($("#dlgCase"), async () => {
+    let body;
+    try { body = JSON.parse($("#caseJson").value); } catch (e) { throw new Error("That isn't valid JSON: " + e.message); }
+    await post(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`, body, "PUT");
+    const keepRun = RUN && VIEW === "run" ? RUN.run_id : null;
+    SET = await call(`/sets/${enc(SET.eval_set_id)}`);
+    if (keepRun) { RUN = await call(`/runs/${keepRun}`); }
+    renderMain(); toast("Case saved.");
+  });
+}
+
+// case from a chat
+let CHAT_CASE = null, CHAT_ID = null;
+async function openChatDialog(sessionId) {
+  CHAT_CASE = null; CHAT_ID = null;
+  $("#chatPick").hidden = !!sessionId; $("#chatPreview").hidden = true;
+  $("#chatSave").hidden = true; $("#chatBack").hidden = true;
+  modal($("#dlgChat"), saveChatCase);
+  if (sessionId) return previewChat(sessionId);
+  const list = $("#chatList"); list.replaceChildren(h("div", { class: "muted", style: "padding:10px", text: "Loading your chats…" }));
+  try {
+    const chats = await call("/chats");
+    list.replaceChildren();
+    if (!chats.length) list.append(h("div", { class: "muted", style: "padding:10px", text: "You have no saved chats yet." }));
+    for (const c of chats) list.append(h("button", { type: "button", onclick: () => previewChat(c.id) },
+      h("span", { text: c.title || "(untitled chat)" }), h("small", { text: when(c.updated ? new Date(c.updated * 1000).toISOString() : null) })));
+  } catch (e) { list.replaceChildren(h("div", { class: "err-line", style: "padding:10px", text: e.message })); }
+}
+async function previewChat(sessionId) {
+  errorTo("#chatErr");
+  try {
+    const p = await post(`/chats/${enc(sessionId)}/case`, { save: false });
+    CHAT_CASE = p.case; CHAT_ID = sessionId;
+    $("#chatPick").hidden = true; $("#chatPreview").hidden = false; $("#chatSave").hidden = false; $("#chatBack").hidden = false;
+    $("#chatFrom").textContent = `From your chat "${p.title || "untitled"}" - ${CHAT_CASE.conversation.length} turn${CHAT_CASE.conversation.length === 1 ? "" : "s"}.`;
+    const sel = $("#chatSet"); sel.replaceChildren(...SETS.map((s) => h("option", { value: s.eval_set_id, text: s.name })));
+    if (SET) sel.value = SET.eval_set_id;
+    $("#chatCaseId").value = (p.title || "case").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || CHAT_CASE.eval_id;
+    $("#chatUser").value = CHAT_CASE.session_input.user_id;
+    const box = $("#chatTurns"); box.replaceChildren();
+    CHAT_CASE.conversation.forEach((t, i) => {
+      if (CHAT_CASE.conversation.length > 1) box.append(h("div", { class: "turn-h", text: `Turn ${i + 1}` }));
+      const tools = (t.intermediate_data && t.intermediate_data.tool_uses) || [];
+      box.append(h("div", { class: "lbl", text: "User says" }), h("div", { class: "resp", text: t.user_content.parts.map((p) => p.text || "").join("\n") }),
+        h("div", { class: "lbl", text: "Expected tool calls" }),
+        h("div", { class: "tr" }, tools.length ? tools.map((c) => h("div", { class: "ok", text: callText(c) })) : h("div", { class: "none", text: "none" })),
+        h("div", { class: "lbl", text: "Expected answer" }),
+        h("div", { class: "resp", text: t.final_response ? t.final_response.parts.map((p) => p.text || "").join("\n") : "(none)" }));
+    });
+    if (!SETS.length) throw new Error("Create an eval set first (+ New on the left).");
+  } catch (e) { errorTo("#chatErr", e); }
+}
+$("#chatBack").onclick = () => openChatDialog();
+async function saveChatCase() {
+  if (!CHAT_CASE) throw new Error("Pick a chat first.");
+  const setId = $("#chatSet").value, caseId = $("#chatCaseId").value.trim();
+  const body = { save: true, eval_set_id: setId, eval_id: caseId, user_id: $("#chatUser").value.trim() };
+  const edited = { ...CHAT_CASE, session_input: { ...CHAT_CASE.session_input, user_id: body.user_id } };
+  try { await post(`/chats/${enc(CHAT_ID)}/case`, { ...body, case: edited }); }
+  catch (e) {
+    if (!/already a case/.test(e.message) || !confirm(e.message + "\nReplace it?")) throw e;
+    await post(`/chats/${enc(CHAT_ID)}/case`, { ...body, case: edited, replace: true });
+  }
+  await openSet(setId, { view: "cases" });
+  toast(`Case ${caseId} saved.`);
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#drawer").hidden && !document.querySelector("dialog[open]")) closeDrawer(); });
+
+// ------------------------------------------------------------------ start
+(async () => {
+  try {
+    INFO = await call("/info");
+    $("#who").textContent = INFO.sign_in ? INFO.user : `${INFO.user} (local)`;
+    await loadSets();
+    const q = new URLSearchParams(location.search);
+    const want = q.get("set") || (SETS[0] && SETS[0].eval_set_id);
+    if (want && SETS.some((s) => s.eval_set_id === want)) await openSet(want, { view: q.get("view") || undefined, run: q.get("run") ? Number(q.get("run")) : undefined });
+    else renderMain();
+    if (q.get("from")) openChatDialog(q.get("from"));
+  } catch (e) {
+    $("#main").replaceChildren(h("div", { class: "msg err", text: e.message }));
+  }
+})();
+</script>
+</body>
+</html>
