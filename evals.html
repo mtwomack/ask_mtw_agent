@@ -150,6 +150,41 @@ textarea.in.big { min-height: 340px; }
 .chatlist button:last-child { border-bottom: 0; }
 .chatlist button:hover { background: rgba(127,127,127,.07); }
 .chatlist small { color: var(--muted); flex: none; }
+/* case editor */
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+.sec { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+.sec > h3 { margin: 0 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sec > h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 11px; margin-right: 6px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.turn { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 10px; background: var(--bg); }
+.turn .hd { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 13px; }
+.call { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel); }
+.call .top { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.call .ctl { display: flex; gap: 2px; }
+.call .ctl button { border: 1px solid transparent; background: none; color: var(--muted); border-radius: 6px; padding: 2px 6px; cursor: pointer; }
+.call .ctl button:hover { border-color: var(--line); color: var(--ink); }
+.call .tdesc { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+.params { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; align-items: center; margin-top: 8px; }
+.params label { font: 12.5px ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.params label i { color: var(--down); font-style: normal; }
+.mono { font: 12.5px ui-monospace, Consolas, monospace; }
+.json { background: #1e1f24; color: #d9d7d0; border-radius: 12px; padding: 14px 16px; font: 12px/1.55 ui-monospace, Consolas, monospace;
+  white-space: pre; overflow: auto; max-height: calc(100vh - 150px); position: sticky; top: 70px; }
+.side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.side-h b { font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); border-top: 1px solid var(--line); }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+/* compare */
+.cmp-pick { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
+.cmp-pick label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+.cmp-pick select { min-width: 220px; }
+.spark { display: block; width: 100%; height: 40px; }
+.editor > * { min-width: 0; }
+.editor textarea.in:not(.mono) { font: 14px/1.45 inherit; font-family: inherit; }
+@media (max-width: 1100px) { .editor { grid-template-columns: minmax(0, 1fr); } .json { position: static; max-height: 360px; } }
+@media (max-width: 600px) { .g2 { grid-template-columns: 1fr; } .params { grid-template-columns: 1fr; } .params label { margin-top: 4px; } }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
   padding: 9px 16px; border-radius: 10px; z-index: 50; font-size: 13.5px; box-shadow: var(--shadow); }
 
@@ -222,11 +257,11 @@ textarea.in.big { min-height: 340px; }
 <dialog id="dlgImport"><form method="dialog">
   <div class="dh"><h3>Import cases</h3><button class="x" value="cancel" aria-label="Close">×</button></div>
   <div class="db">
-    <div class="sub">An ADK <b>.evalset.json</b> - from <code>adk eval</code>, the dev UI's Eval tab or an export from here. Cases with the same ID are replaced.</div>
+    <div class="sub">An ADK <b>.evalset.json</b> (from <code>adk eval</code>, the dev UI's Eval tab or an export from here) or a <b>.csv</b> with one row per turn - <a href="#" id="csvTemplate">download the CSV template</a>. Cases with the same ID are replaced.</div>
     <label class="f">File</label>
-    <input class="in" type="file" id="impFile" accept=".json,application/json">
+    <input class="in" type="file" id="impFile" accept=".json,.csv,application/json,text/csv">
     <label class="f">…or paste the JSON</label>
-    <textarea class="in" id="impText" placeholder='{"eval_set_id": "quotes", "eval_cases": [ ... ]}'></textarea>
+    <textarea class="in" id="impText" placeholder='{"eval_set_id": "quotes", "eval_cases": [ ... ]}  - or CSV rows'></textarea>
     <label class="f">test_config.json <small>optional · sets the scoring, e.g. {"criteria": {"tool_trajectory_avg_score": 1.0}}</small></label>
     <textarea class="in" id="impCfg" style="min-height:60px"></textarea>
     <div class="err-line" id="impErr"></div>
@@ -266,7 +301,7 @@ textarea.in.big { min-height: 340px; }
     <textarea class="in big" id="caseJson" spellcheck="false"></textarea>
     <div class="err-line" id="caseErr"></div>
   </div>
-  <div class="df"><button class="btn danger" id="caseDel" type="button">Delete case</button><span class="sp"></span><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="caseSave" value="default">Save</button></div>
+  <div class="df"><button class="btn" value="cancel">Cancel</button><button class="btn pri" id="caseSave" value="default">Apply to form</button></div>
 </form></dialog>
 
 <script>
@@ -305,6 +340,7 @@ async function call(path, opts = {}) {
 const post = (p, body, method = "POST") => call(p, { method, body: JSON.stringify(body || {}) });
 const enc = encodeURIComponent;
 function toast(msg) {
+  document.querySelectorAll(".toast").forEach((t) => t.remove());
   const t = h("div", { class: "toast", text: msg }); document.body.append(t);
   setTimeout(() => t.remove(), 3500);
 }
@@ -335,8 +371,10 @@ function statusPill(r) {
 function setUrl() {
   const q = new URLSearchParams();
   if (SET) q.set("set", SET.eval_set_id);
-  if (RUN) q.set("run", RUN.run_id);
+  if (RUN && VIEW === "run") q.set("run", RUN.run_id);
   if (VIEW === "cases") q.set("view", "cases");
+  if (VIEW === "edit" && EDIT) q.set("edit", EDIT.original || "new");
+  if (VIEW === "compare" && CMP.ids.length) q.set("compare", CMP.ids.join(","));
   history.replaceState(null, "", "/evals" + (q.toString() ? "?" + q : ""));
 }
 
@@ -406,15 +444,21 @@ function renderMain() {
     h("div", {}, h("h2", { text: SET.name }),
       h("div", { class: "sub", text: `${cases} case${cases === 1 ? "" : "s"} · set ID ${SET.eval_set_id}` })),
     h("div", { class: "row" },
+      h("button", { class: "btn", onclick: () => openEditor(null) }, "+ New case"),
       h("button", { class: "btn", onclick: () => openChatDialog() }, "+ From a chat"),
       h("button", { class: "btn", onclick: openImport }, "Import"),
       h("a", { class: "btn hide-sm", href: `/evals/api/sets/${enc(SET.eval_set_id)}/export` }, "Export"),
       h("button", { class: "btn danger hide-sm", onclick: deleteSet }, "Delete set"),
       h("button", { class: "btn pri", onclick: () => openRunDialog(), disabled: !cases || runningRun() }, "▶ Run"))));
+  const doneRuns = SET.runs.filter((r) => r.status === "done").length;
   main.append(h("div", { class: "tabs" },
     h("button", { class: VIEW === "run" ? "on" : "", disabled: !SET.runs.length, onclick: () => SET.runs.length && openRun((RUN || SET.runs[0]).run_id) },
       RUN ? `Run #${RUN.run_id}` : "Results"),
-    h("button", { class: VIEW === "cases" ? "on" : "", onclick: () => { VIEW = "cases"; closeDrawer(); renderRuns(); renderMain(); } }, `Cases (${cases})`)));
+    h("button", { class: VIEW === "cases" || VIEW === "edit" ? "on" : "", onclick: () => { VIEW = "cases"; closeDrawer(); renderRuns(); renderMain(); } }, `Cases (${cases})`),
+    h("button", { class: VIEW === "compare" ? "on" : "", disabled: doneRuns < 2, title: doneRuns < 2 ? "Needs two finished runs" : "",
+      onclick: () => openCompare() }, "Compare runs")));
+  if (VIEW === "edit") return renderEditor(main);
+  if (VIEW === "compare") return renderCompare(main);
   if (VIEW === "cases" || !RUN) return renderCases(main);
   renderRun(main);
 }
@@ -432,8 +476,9 @@ function renderCases(main) {
   if (!SET.cases.length) {
     main.append(h("div", { class: "empty" }, h("p", {}, "No cases in this set yet."),
       h("div", { class: "row", style: "justify-content:center" },
-        h("button", { class: "btn pri", onclick: () => openChatDialog() }, "+ Add from a chat"),
-        h("button", { class: "btn", onclick: openImport }, "Import .evalset.json"))));
+        h("button", { class: "btn pri", onclick: () => openEditor(null) }, "+ New case"),
+        h("button", { class: "btn", onclick: () => openChatDialog() }, "+ Add from a chat"),
+        h("button", { class: "btn", onclick: openImport }, "Import JSON or CSV"))));
     return;
   }
   const body = h("tbody");
@@ -442,13 +487,17 @@ function renderCases(main) {
       h("td", {}, h("div", { class: "q", text: c.eval_id }), h("div", { class: "qs", text: `"${c.user}"` })),
       h("td", {}, c.tools.length ? c.tools.map((t) => h("span", { class: "chip", text: t })) : h("span", { class: "muted", text: "no tools" })),
       h("td", { class: "n", text: c.turns }),
-      h("td", { class: "n hide-sm", text: when(c.updated_at) })));
+      h("td", { class: "n hide-sm", text: when(c.updated_at) }),
+      h("td", { class: "n" }, h("button", { class: "btn sm", onclick: (e) => { e.stopPropagation(); openEditor(c.eval_id); } }, "Edit"))));
   }
   main.append(h("div", { class: "tablewrap" }, h("table", {},
-    h("thead", {}, h("tr", {}, h("th", { text: "Case" }), h("th", { text: "Expected tools" }), h("th", { class: "n", text: "Turns" }), h("th", { class: "n hide-sm", text: "Updated" }))),
+    h("thead", {}, h("tr", {}, h("th", { text: "Case" }), h("th", { text: "Expected tools" }), h("th", { class: "n", text: "Turns" }), h("th", { class: "n hide-sm", text: "Updated" }), h("th"))),
     body)));
+  main.append(h("div", { class: "hint", style: "margin-top:10px", text: "Click a case or Edit to change it. Each case runs on its own, as the user it's set to run as." }));
 }
 
+const isRubric = (name) => name.startsWith("rubric_based_");
+const hasRubric = (evalId) => { const c = SET.cases.find((x) => x.eval_id === evalId); return !c || c.rubrics > 0; };
 // Columns in the order the run dialog lists them (the database doesn't keep key order).
 function orderedMetrics(criteria) {
   const order = (INFO.metrics || []).map((m) => m.name);
@@ -475,9 +524,15 @@ function renderRun(main) {
 
   // A metric that couldn't be scored (e.g. the LLM judge had no API key or hit a quota) is
   // left out of pass/fail by ADK - say so, or a "Pass" would look better than it is.
-  const unscored = {};
+  // Rubric checks only apply to cases that have rubric lines - that's expected, not a problem.
+  const unscored = {}; let noRubric = 0;
   for (const res of r.results) for (const m of res.metrics || [])
-    if (m.status === "not_evaluated") unscored[m.name] = (unscored[m.name] || 0) + 1;
+    if (m.status === "not_evaluated") {
+      if (isRubric(m.name) && !hasRubric(res.eval_id)) noRubric++;
+      else unscored[m.name] = (unscored[m.name] || 0) + 1;
+    }
+  if (noRubric) main.append(h("div", { class: "hint", style: "margin:-4px 0 12px",
+    text: `Rubric checks: ${noRubric} case${noRubric === 1 ? " has" : "s have"} no rubric lines, so only the other checks count for ${noRubric === 1 ? "it" : "them"}. Add lines in the case editor.` }));
   const names = Object.keys(unscored);
   if (names.length) main.append(h("div", { class: "msg" },
     h("b", { text: "Not everything was scored. " }),
@@ -500,6 +555,8 @@ function renderRun(main) {
         h("div", { class: "v", text: fmt(r.averages[m]) }),
         prev ? delta(r.averages[m], (prev.metrics || {})[m], 2) : h("div", { class: "d muted", text: `pass ≥ ${r.criteria[m]}` })));
     }
+    const trend = trendCard(r.run_id);
+    if (trend) cards.append(trend);
     if (r.tokens) cards.append(h("div", { class: "card" }, h("div", { class: "k", text: "Tokens (agent)" }),
       h("div", { class: "v", text: Number(r.tokens).toLocaleString() }),
       prev && prev.tokens ? delta(Number(r.tokens) / 1000, Number(prev.tokens) / 1000, 1, "k") : null));
@@ -516,6 +573,8 @@ function renderRun(main) {
       h("td", {}, statusPill(res)),
       metricNames.map((m) => {
         const x = byName[m];
+        if (x && x.status === "not_evaluated" && isRubric(m) && !hasRubric(res.eval_id))
+          return h("td", { class: "n muted", title: "No rubric lines in this case", text: "—" });
         if (x && x.status === "not_evaluated") return h("td", { class: "n muted", title: "Not scored", text: "n/a" });
         return h("td", { class: "n " + (x && x.status === "failed" ? "low" : ""), text: x ? fmt(x.score) : "–" });
       }),
@@ -543,7 +602,7 @@ function showResult(evalId) {
   if (res.error) d.append(h("div", { class: "msg err", text: res.error }));
   if ((res.metrics || []).length) d.append(h("div", { class: "row", style: "margin-top:8px" },
     res.metrics.map((m) => h("span", { class: "pill " + (m.status === "passed" ? "pass" : m.status === "failed" ? "fail" : "na"),
-      text: m.status === "not_evaluated" ? `${short(m.name)}: not scored`
+      text: m.status === "not_evaluated" ? `${short(m.name)}: ${isRubric(m.name) && !hasRubric(res.eval_id) ? "no rubric lines" : "not scored"}`
         : `${short(m.name)} ${fmt(m.score)}${typeof m.threshold === "number" ? ` / ${m.threshold}` : ""}` }))));
 
   (res.turns || []).forEach((t, i) => {
@@ -649,7 +708,9 @@ function openImport() {
     if (file) text = await file.text();
     if (!text) throw new Error("Choose a file or paste the JSON.");
     let evalset, criteria = null;
-    try { evalset = JSON.parse(text); } catch (e) { throw new Error("That isn't valid JSON: " + e.message); }
+    const looksCsv = (file && /\.csv$/i.test(file.name)) || (!/^\s*[\[{]/.test(text) && /user_message/i.test(text.split(/\r?\n/)[0]));
+    if (looksCsv) evalset = csvToEvalset(text);
+    else try { evalset = JSON.parse(text); } catch (e) { throw new Error("That isn't valid JSON: " + e.message); }
     if (evalset.test_config) criteria = evalset.test_config;                 // an export from this page
     const cfg = $("#impCfg").value.trim();
     if (cfg) { try { criteria = JSON.parse(cfg); } catch (e) { throw new Error("test_config.json isn't valid JSON: " + e.message); } }
@@ -659,23 +720,18 @@ function openImport() {
   });
 }
 
-async function editCase(evalId) {
-  const data = await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`);
-  $("#caseTitle").textContent = `Edit case · ${evalId}`;
-  $("#caseJson").value = JSON.stringify(data, null, 2);
-  $("#caseDel").onclick = async () => {
-    if (!confirm(`Delete the case ${evalId}?`)) return;
-    await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`, { method: "DELETE" });
-    $("#dlgCase").close(); await openSet(SET.eval_set_id, { view: "cases" }); toast("Case deleted.");
-  };
+const editCase = (evalId) => openEditor(evalId);
+// The editor's "Edit as JSON": edit the whole case as JSON, then load it back into the form.
+function editAsJson() {
+  $("#caseTitle").textContent = `Edit as JSON · ${EDIT.eval_id || "new case"}`;
+  $("#caseJson").value = JSON.stringify(editToCase(), null, 2);
   modal($("#dlgCase"), async () => {
     let body;
     try { body = JSON.parse($("#caseJson").value); } catch (e) { throw new Error("That isn't valid JSON: " + e.message); }
-    await post(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`, body, "PUT");
-    const keepRun = RUN && VIEW === "run" ? RUN.run_id : null;
-    SET = await call(`/sets/${enc(SET.eval_set_id)}`);
-    if (keepRun) { RUN = await call(`/runs/${keepRun}`); }
-    renderMain(); toast("Case saved.");
+    if (!body || !Array.isArray(body.conversation)) throw new Error('A case needs a "conversation" list.');
+    const original = EDIT.original;
+    EDIT = caseToEdit(body); EDIT.original = original;
+    renderMain();
   });
 }
 
@@ -737,6 +793,422 @@ async function saveChatCase() {
 
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#drawer").hidden && !document.querySelector("dialog[open]")) closeDrawer(); });
 
+// ------------------------------------------------------------------ case editor
+// EDIT is the form's state; editToCase() turns it into ADK's EvalCase JSON (shown live on the
+// right and sent on save), caseToEdit() goes the other way. Fields the form doesn't show
+// (invocation ids, other rubric types, sub-agent responses) are kept as they were.
+let EDIT = null, TOOLS = null, TOOLS_ERR = "";
+const RUBRIC_TYPE = "FINAL_RESPONSE_QUALITY";
+
+async function loadTools() {
+  if (TOOLS) return TOOLS;
+  try { TOOLS = await call("/tools"); TOOLS_ERR = ""; }
+  catch (e) { TOOLS = []; TOOLS_ERR = e.message; }
+  return TOOLS;
+}
+const toolInfo = (name) => (TOOLS || []).find((t) => t.name === name);
+const textOf = (content) => ((content && content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join("\n");
+
+function callsOf(inter) {
+  if (!inter) return [];
+  if (Array.isArray(inter.tool_uses)) return inter.tool_uses.map((c) => ({ name: c.name || "", args: c.args || {} }));
+  const out = [];                                   // newer format: invocation_events
+  for (const ev of inter.invocation_events || []) for (const p of (ev.content && ev.content.parts) || [])
+    if (p.function_call) out.push({ name: p.function_call.name, args: p.function_call.args || {} });
+  return out;
+}
+
+function caseToEdit(c) {
+  const rubrics = c.rubrics || [];
+  return {
+    original: c.eval_id || null,
+    eval_id: c.eval_id || "",
+    user_id: (c.session_input && c.session_input.user_id) || "eval@test",
+    state: JSON.stringify((c.session_input && c.session_input.state) || {}, null, 0),
+    rubrics: rubrics.filter((r) => !r.type || r.type === RUBRIC_TYPE).map((r) => (r.rubric_content && r.rubric_content.text_property) || "").join("\n"),
+    otherRubrics: rubrics.filter((r) => r.type && r.type !== RUBRIC_TYPE),
+    extra: Object.fromEntries(Object.entries(c).filter(([k]) => !["eval_id", "conversation", "session_input", "rubrics"].includes(k))),
+    turns: (c.conversation || []).map((t) => ({
+      user: textOf(t.user_content), answer: textOf(t.final_response), tools: callsOf(t.intermediate_data),
+      keep: Object.fromEntries(Object.entries(t).filter(([k]) => !["user_content", "final_response", "intermediate_data"].includes(k))),
+      responses: (t.intermediate_data && t.intermediate_data.intermediate_responses) || null,
+    })),
+  };
+}
+function newEdit() {
+  return { original: null, eval_id: "", user_id: "eval@test", state: "{}", rubrics: "", otherRubrics: [], extra: {},
+           turns: [{ user: "", answer: "", tools: [], keep: {}, responses: null }] };
+}
+function editToCase() {
+  const e = EDIT;
+  let state = {};
+  try { state = e.state.trim() ? JSON.parse(e.state) : {}; } catch { state = "⚠ not valid JSON"; }
+  const rubrics = e.rubrics.split("\n").map((l) => l.trim()).filter(Boolean)
+    .map((text, i) => ({ rubric_id: `r${i + 1}`, rubric_content: { text_property: text }, type: RUBRIC_TYPE }));
+  const c = {
+    eval_id: e.eval_id,
+    conversation: e.turns.map((t) => {
+      const turn = { ...t.keep, user_content: { role: "user", parts: [{ text: t.user }] },
+        intermediate_data: { tool_uses: t.tools.filter((x) => x.name).map((x) => ({ name: x.name, args: x.args })) } };
+      if (t.responses) turn.intermediate_data.intermediate_responses = t.responses;
+      if (t.answer.trim()) turn.final_response = { role: "model", parts: [{ text: t.answer }] };
+      return turn;
+    }),
+    session_input: { app_name: INFO.app_name, user_id: e.user_id || "eval@test", state },
+    ...e.extra,
+  };
+  const all = [...rubrics, ...e.otherRubrics];
+  if (all.length) c.rubrics = all;
+  return c;
+}
+
+async function openEditor(evalId) {
+  closeDrawer();
+  await loadTools();
+  if (evalId) EDIT = caseToEdit(await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(evalId)}`));
+  else EDIT = newEdit();
+  VIEW = "edit"; renderRuns(); renderMain();
+  window.scrollTo(0, 0);
+}
+
+// a typed value from what's in an argument box: numbers, true/false and JSON lists/objects
+// keep their type when the tool says so; everything else is text
+function parseArg(raw, type) {
+  const v = raw.trim();
+  if (type === "integer" || type === "number") { const n = Number(v); return v !== "" && !isNaN(n) ? n : v; }
+  if (type === "boolean") return v === "true" ? true : v === "false" ? false : v;
+  if (type === "array" || type === "object") { try { return JSON.parse(v); } catch { return v; } }
+  return v;
+}
+const showArg = (v) => (typeof v === "string" ? v : JSON.stringify(v));
+
+function renderEditor(main) {
+  const e = EDIT;
+  const preview = h("pre", { class: "json" });
+  const refresh = () => { preview.textContent = JSON.stringify(editToCase(), null, 2); };
+  const field = (value, onInput, attrs = {}) => {
+    const el = h(attrs.multiline ? "textarea" : "input", { class: "in" + (attrs.mono ? " mono" : ""), placeholder: attrs.placeholder || "", rows: attrs.rows || null, list: attrs.list || null });
+    el.value = value; el.oninput = () => { onInput(el.value); refresh(); };
+    if (attrs.multiline) el.style.minHeight = attrs.minHeight || "62px";
+    return el;
+  };
+
+  const form = h("div");
+  form.append(h("div", { class: "title-row", style: "margin-bottom:12px" },
+    h("div", {}, h("h2", { text: e.original ? `Edit case · ${e.original}` : "New eval case", style: "font-size:18px" }),
+      h("div", { class: "sub", style: "margin-bottom:0", text: "Fill in the form - the JSON on the right is what gets saved (ADK's eval case format)." })),
+    e.original ? null : h("div", { class: "row" }, h("button", { class: "btn", onclick: () => openChatDialog() }, "Start from a chat…"),
+      h("button", { class: "btn", onclick: openImport }, "Import CSV / JSON"))));
+
+  // 1. case
+  form.append(h("div", { class: "sec" }, h("h3", {}, h("span", {}, h("span", { class: "num", text: "1" }), "Case")),
+    h("div", { class: "g2" },
+      h("div", {}, h("label", { class: "f" }, "Case ID ", h("small", { text: "eval_id · letters, numbers, _ . -" })),
+        field(e.eval_id, (v) => (e.eval_id = v.trim()), { mono: true, placeholder: "compare_two_tickers" })),
+      h("div", {}, h("label", { class: "f" }, "Eval set ", h("small", { text: "eval_set_id" })),
+        h("input", { class: "in", value: SET.name, disabled: true })))));
+
+  // 2. session
+  form.append(h("div", { class: "sec" }, h("h3", {}, h("span", {}, h("span", { class: "num", text: "2" }), "Session setup ", h("small", { text: "- session_input" }))),
+    h("div", { class: "g2" },
+      h("div", {}, h("label", { class: "f" }, "Run as user ", h("small", { text: "user_id · an admin email can use admin-only tools" })),
+        field(e.user_id, (v) => (e.user_id = v.trim()), { placeholder: "eval@test", list: "userIds" }),
+        h("datalist", { id: "userIds" }, ["eval@test", INFO.user].filter(Boolean).map((u) => h("option", { value: u })))),
+      h("div", {}, h("label", { class: "f" }, "Starting state ", h("small", { text: "optional JSON, e.g. {\"user:profile\": {...}}" })),
+        field(e.state === "{}" ? "" : e.state, (v) => (e.state = v.trim() || "{}"), { mono: true, placeholder: "{ } - none" })))));
+
+  // 3. conversation
+  const conv = h("div", { class: "sec" }, h("h3", {}, h("span", {}, h("span", { class: "num", text: "3" }), "Conversation"),
+    h("button", { class: "btn sm", onclick: () => { e.turns.push({ user: "", answer: "", tools: [], keep: {}, responses: null }); renderMain(); } }, "+ Add turn")));
+  if (TOOLS_ERR) conv.append(h("div", { class: "msg", text: `Couldn't load the agent's tool list (${TOOLS_ERR}) - type tool names and arguments by hand.` }));
+  conv.append(h("datalist", { id: "toolNames" }, (TOOLS || []).map((t) => h("option", { value: t.name }, t.description))));
+  e.turns.forEach((t, ti) => {
+    const box = h("div", { class: "turn" });
+    box.append(h("div", { class: "hd" }, h("span", { text: `Turn ${ti + 1}` }),
+      e.turns.length > 1 ? h("button", { class: "btn sm danger", onclick: () => { e.turns.splice(ti, 1); renderMain(); } }, "Remove turn") : null));
+    box.append(h("label", { class: "f" }, "User says ", h("small", { text: "user_content" })),
+      field(t.user, (v) => (t.user = v), { multiline: true, minHeight: "42px", placeholder: "MSFT vs GOOGL today" }));
+    box.append(h("label", { class: "f" }, "Expected tool calls ", h("small", { text: "intermediate_data.tool_uses - matched by name + arguments, in order" })));
+    t.tools.forEach((c, ci) => {
+      const info = toolInfo(c.name);
+      const card = h("div", { class: "call" });
+      const shownFor = c.name;
+      const name = field(c.name, (v) => { c.name = v.trim(); }, { mono: true, list: "toolNames", placeholder: "tool name" });
+      name.onchange = () => {                       // a different tool: show its arguments
+        if (c.name === shownFor) return;            // (also fires on blur when the form is redrawn)
+        const ni = toolInfo(c.name);
+        if (ni) c.args = Object.fromEntries(Object.entries(c.args).filter(([k]) => ni.params.some((p) => p.name === k)));
+        setTimeout(() => { if (VIEW === "edit") renderMain(); });
+      };
+      const move = (d) => { const j = ci + d; if (j < 0 || j >= t.tools.length) return; [t.tools[ci], t.tools[j]] = [t.tools[j], t.tools[ci]]; renderMain(); };
+      card.append(h("div", { class: "top" }, name, h("div", { class: "ctl" },
+        h("button", { title: "Move up", onclick: () => move(-1), disabled: ci === 0 }, "↑"),
+        h("button", { title: "Move down", onclick: () => move(1), disabled: ci === t.tools.length - 1 }, "↓"),
+        h("button", { title: "Remove", onclick: () => { t.tools.splice(ci, 1); renderMain(); } }, "✕"))));
+      if (info && info.description) card.append(h("div", { class: "tdesc", text: info.description }));
+      if (info) {
+        const grid = h("div", { class: "params" });
+        const names = [...info.params.map((p) => p.name), ...Object.keys(c.args).filter((k) => !info.params.some((p) => p.name === k))];
+        if (!names.length) grid.append(h("span", { class: "muted", style: "grid-column:1/-1;font-size:12.5px", text: "This tool takes no arguments." }));
+        for (const pn of names) {
+          const meta = info.params.find((p) => p.name === pn) || { name: pn, type: "string" };
+          grid.append(h("label", { title: meta.description || "" }, pn, meta.required ? h("i", { text: " *" }) : null),
+            field(pn in c.args ? showArg(c.args[pn]) : "", (v) => {
+              if (v.trim() === "") delete c.args[pn]; else c.args[pn] = parseArg(v, meta.type);
+            }, { mono: true, placeholder: `${meta.type}${meta.required ? "" : " · leave blank if not expected"}` }));
+        }
+        card.append(grid);
+      } else if (c.name) {
+        card.append(h("div", { class: "hint", text: "Not one of the agent's tools - arguments as JSON:" }),
+          field(JSON.stringify(c.args), (v) => { try { c.args = JSON.parse(v || "{}"); } catch {} }, { mono: true, placeholder: '{"symbol": "AAPL"}' }));
+      }
+      box.append(card);
+    });
+    box.append(h("button", { class: "btn sm", onclick: () => { t.tools.push({ name: "", args: {} }); renderMain(); } }, "+ Add tool call"));
+    if (!t.tools.length) box.append(h("span", { class: "hint", style: "margin-left:8px", text: "None = the agent should answer without tools." }));
+    box.append(h("label", { class: "f" }, "Expected answer ", h("small", { text: "final_response · for live data describe it, e.g. \"[the latest price]\"" })),
+      field(t.answer, (v) => (t.answer = v), { multiline: true, placeholder: "MSFT $512.40 (+0.8%) vs GOOGL $201.15 (−0.3%). Quotes may be delayed." }));
+    conv.append(box);
+  });
+  form.append(conv);
+
+  // 4. rubric
+  form.append(h("div", { class: "sec" }, h("h3", {}, h("span", {}, h("span", { class: "num", text: "4" }), "Rubric ", h("small", { text: "- optional, one check per line" }))),
+    field(e.rubrics, (v) => (e.rubrics = v), { multiline: true, minHeight: "80px", placeholder: "Uses the exact symbols the user asked for\nShows price and % change for both\nIncludes \"Quotes may be delayed\"" }),
+    h("div", { class: "hint" }, "Checked by the LLM judge when the run uses ", h("b", { text: "Rubric checks" }), ". Scoring settings (which checks, thresholds) are per set, in the Run dialog.")));
+
+  // footer
+  const err = h("div", { class: "err-line" });
+  form.append(err, h("div", { class: "foot" },
+    e.original ? h("button", { class: "btn danger", style: "margin-right:auto", onclick: deleteEditedCase }, "Delete case") : null,
+    h("button", { class: "btn", onclick: () => { EDIT = null; VIEW = "cases"; renderMain(); } }, "Cancel"),
+    h("button", { class: "btn", onclick: editAsJson }, "Edit as JSON"),
+    h("button", { class: "btn", disabled: runningRun(), onclick: (ev) => saveEditor(err, ev.target, true) }, "Save & run"),
+    h("button", { class: "btn pri", onclick: (ev) => saveEditor(err, ev.target, false) }, "Save case")));
+
+  const side = h("div", {}, h("div", { class: "side-h" }, h("b", { text: "JSON preview" }),
+    h("button", { class: "btn sm", onclick: () => { navigator.clipboard?.writeText(preview.textContent); toast("Copied."); } }, "Copy")), preview);
+  main.append(h("div", { class: "editor" }, form, side));
+  refresh();
+}
+
+async function saveEditor(errEl, btn, runAfter) {
+  errEl.textContent = "";
+  const e = EDIT;
+  try {
+    if (!/^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,79}$/.test(e.eval_id)) throw new Error("Give the case an ID: letters, numbers, _ . - (no spaces).");
+    if (!e.turns.length || e.turns.some((t) => !t.user.trim())) throw new Error("Every turn needs what the user says.");
+    if (e.turns.some((t) => t.tools.some((c) => !c.name))) throw new Error("A tool call has no tool name - pick one or remove it.");
+    try { JSON.parse(e.state || "{}"); } catch { throw new Error("Starting state isn't valid JSON."); }
+    btn.disabled = true;
+    const body = editToCase();
+    const base = `/sets/${enc(SET.eval_set_id)}/cases`;
+    if (e.original) await post(`${base}/${enc(e.original)}`, body, "PUT");
+    else {
+      try { await post(base, body); }
+      catch (x) {
+        if (!/already a case/.test(x.message) || !confirm(x.message + "\nReplace it?")) throw x;
+        await post(`${base}/${enc(e.eval_id)}`, body, "PUT");
+      }
+    }
+    const id = e.eval_id;
+    EDIT = null;
+    SET = await call(`/sets/${enc(SET.eval_set_id)}`);
+    await loadSets();
+    VIEW = "cases"; renderRuns(); renderMain();
+    toast(`Case ${id} saved.`);
+    if (runAfter) openRunDialog([id]);
+  } catch (x) { errEl.textContent = x.message; }
+  finally { btn.disabled = false; }
+}
+async function deleteEditedCase() {
+  const id = EDIT.original;
+  if (!confirm(`Delete the case ${id}?`)) return;
+  await call(`/sets/${enc(SET.eval_set_id)}/cases/${enc(id)}`, { method: "DELETE" });
+  EDIT = null; await openSet(SET.eval_set_id, { view: "cases" }); toast("Case deleted.");
+}
+
+// ------------------------------------------------------------------ trend + compare
+function trendCard(currentId) {
+  const runs = SET.runs.filter((r) => r.status === "done" && r.total).slice(0, 10).reverse();
+  if (runs.length < 2) return null;
+  const W = 220, H = 40, pad = 4;
+  const x = (i) => pad + (i * (W - 2 * pad)) / (runs.length - 1);
+  const y = (r) => H - pad - (r.passed / r.total) * (H - 2 * pad);
+  const pts = runs.map((r, i) => `${x(i).toFixed(1)},${y(r).toFixed(1)}`).join(" ");
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "spark"); svg.setAttribute("preserveAspectRatio", "none");
+  const line = document.createElementNS(ns, "polyline");
+  line.setAttribute("points", pts); line.setAttribute("fill", "none"); line.setAttribute("stroke", "var(--accent)"); line.setAttribute("stroke-width", "2");
+  line.setAttribute("vector-effect", "non-scaling-stroke");
+  svg.append(line);
+  runs.forEach((r, i) => {
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("cx", x(i)); c.setAttribute("cy", y(r)); c.setAttribute("r", r.run_id === currentId ? 3.5 : 2);
+    c.setAttribute("fill", r.run_id === currentId ? (r.passed === r.total ? "var(--up)" : "var(--down)") : "var(--accent)");
+    const t = document.createElementNS(ns, "title"); t.textContent = `#${r.run_id}${r.label ? " " + r.label : ""}: ${r.passed}/${r.total}`;
+    c.append(t); svg.append(c);
+  });
+  return h("div", { class: "card" }, h("div", { class: "k", text: `Pass rate · last ${runs.length} runs` }), svg);
+}
+
+let CMP = { ids: [], runs: [] };
+async function openCompare(ids) {
+  closeDrawer();
+  const done = SET.runs.filter((r) => r.status === "done");
+  CMP.ids = (ids && ids.length ? ids : done.slice(0, 2).map((r) => r.run_id).reverse()).filter((id) => done.some((r) => r.run_id === id)).slice(0, 3);
+  CMP.runs = await Promise.all(CMP.ids.map((id) => call(`/runs/${id}`)));
+  VIEW = "compare"; renderRuns(); renderMain();
+}
+function renderCompare(main) {
+  const done = SET.runs.filter((r) => r.status === "done");
+  const label = (r) => `#${r.run_id} · ${when(r.started_at)}${r.label ? " · " + r.label : ""}`;
+  const pick = h("div", { class: "cmp-pick" });
+  for (let k = 0; k < 3; k++) {
+    const sel = h("select", { class: "in" }, k === 2 ? h("option", { value: "", text: "(none)" }) : null,
+      done.map((r) => h("option", { value: r.run_id, text: label(r), selected: CMP.ids[k] === r.run_id })));
+    if (k === 2 && CMP.ids.length < 3) sel.value = "";
+    sel.onchange = () => {
+      const ids = [...pick.querySelectorAll("select")].map((s) => Number(s.value)).filter(Boolean);
+      openCompare([...new Set(ids)]);
+    };
+    pick.append(h("div", {}, h("label", { text: k === 0 ? "Before" : k === 1 ? "After" : "Also compare (optional)" }), sel));
+  }
+  main.append(h("div", { class: "sub", text: "See what a prompt, tool or model change did, case by case." }), pick);
+  const runs = CMP.runs;
+  if (runs.length < 2) { main.append(h("div", { class: "msg", text: "Pick two different runs." })); return; }
+
+  const avg = (r, key) => { const v = r.results.map((x) => x[key]).filter((n) => typeof n === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  main.append(h("div", { class: "cards" }, runs.map((r) => h("div", { class: "card" },
+    h("div", { class: "k", text: `Run #${r.run_id} · ${when(r.started_at)}` }),
+    h("div", { style: "font-weight:650;font-size:15px;margin-top:2px", text: [r.model, r.label].filter(Boolean).join(" · ") || "(no label)" }),
+    h("div", { class: "d " + (r.passed === r.total ? "up" : "down"),
+      text: [`${r.passed}/${r.total} passed`, avg(r, "seconds") != null && `${avg(r, "seconds").toFixed(1)}s per turn`,
+             r.tokens && `${(Number(r.tokens) / 1000).toFixed(1)}k tokens`].filter(Boolean).join(" · ") })))));
+
+  const order = SET.cases.map((c) => c.eval_id);
+  const ids = [...new Set([...order, ...runs.flatMap((r) => r.results.map((x) => x.eval_id))])]
+    .filter((id) => runs.some((r) => r.results.some((x) => x.eval_id === id)));
+  const first = runs[0], last = runs[runs.length - 1];
+  const res = (r, id) => r.results.find((x) => x.eval_id === id);
+  const fixed = [], broke = [];
+  const body = h("tbody");
+  for (const id of ids) {
+    const a = res(first, id), b = res(last, id);
+    let change = h("span", { class: "muted", text: "—" });
+    if (a && b) {
+      if (a.status !== "passed" && b.status === "passed") fixed.push(id);
+      if (a.status === "passed" && b.status !== "passed") broke.push(id);
+      // the metric that moved most
+      let best = null;
+      for (const m of b.metrics || []) {
+        const before = (a.metrics || []).find((x) => x.name === m.name);
+        if (!before || typeof before.score !== "number" || typeof m.score !== "number") continue;
+        const d = m.score - before.score;
+        if (Math.abs(d) > 1e-9 && (!best || Math.abs(d) > Math.abs(best.d))) best = { name: m.name, d, from: before.score, to: m.score };
+      }
+      if (best) change = h("span", { class: best.d > 0 ? "up" : "down", text: `${best.d > 0 ? "▲" : "▼"} ${short(best.name)} ${fmt(best.from)} → ${fmt(best.to)}` });
+      else if (a.status !== b.status) change = h("span", { text: `${a.status} → ${b.status}` });
+    } else change = h("span", { class: "muted", text: a ? "not in the later run" : "new case" });
+    body.append(h("tr", {},
+      h("td", { class: "q", text: id }),
+      runs.map((r) => { const x = res(r, id); return h("td", {}, x ? statusPill({ status: x.status }) : h("span", { class: "muted", text: "—" })); }),
+      h("td", {}, change)));
+  }
+  main.append(h("div", { class: "tablewrap" }, h("table", {},
+    h("thead", {}, h("tr", {}, h("th", { text: "Case" }), runs.map((r) => h("th", { text: `#${r.run_id}${r.label ? " " + r.label : ""}` })),
+      h("th", { text: `Change #${first.run_id} → #${last.run_id}` }))), body)));
+  const parts = [];
+  if (broke.length) parts.push(`${broke.length} case${broke.length === 1 ? "" : "s"} broke (${broke.join(", ")})`);
+  if (fixed.length) parts.push(`${fixed.length} fixed (${fixed.join(", ")})`);
+  main.append(h("div", { class: "msg", style: "margin-top:14px" },
+    h("b", { text: `Run #${first.run_id} → #${last.run_id}: ` }),
+    parts.length ? parts.join("; ") + "." : "no case changed between pass and fail."));
+}
+
+// ------------------------------------------------------------------ CSV import
+// One row per turn: eval_id, user_message, expected_tools, expected_answer, rubric, user_id.
+// Rows with the same eval_id become the turns of one case, in order.
+// expected_tools:  get_stock_price(company="AAPL"); get_stock_price(company="MSFT")
+// rubric: one check per line (or separated by " | "), on the case's first row.
+const CSV_TEMPLATE = [
+  "eval_id,user_message,expected_tools,expected_answer,rubric,user_id",
+  'aapl_price,What\'s AAPL trading at?,"get_stock_price(company=""AAPL"")","Apple (AAPL) is trading at [the latest price]. Quotes may be delayed.","Shows the price and the day\'s % change | Says quotes may be delayed",eval@test',
+  'compare_two,MSFT vs GOOGL today,"get_stock_price(company=""MSFT""); get_stock_price(company=""GOOGL"")","Both prices and changes, and which one is up more. Quotes may be delayed.",Uses the exact symbols asked for,eval@test',
+  'nvda_follow_up,NVDA price,"get_stock_price(company=""NVDA"")",NVIDIA (NVDA) at [the latest price].,,eval@test',
+  'nvda_follow_up,and AAPL?,"get_stock_price(company=""AAPL"")",Apple (AAPL) at [the latest price].,,',
+].join("\r\n") + "\r\n";
+$("#csvTemplate").onclick = (ev) => {
+  ev.preventDefault();
+  const a = h("a", { href: URL.createObjectURL(new Blob([CSV_TEMPLATE], { type: "text/csv" })), download: "evals_template.csv" });
+  document.body.append(a); a.click(); a.remove();
+};
+
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+function parseCalls(spec, where) {
+  const calls = [];
+  const src = (spec || "").trim();
+  if (!src) return calls;
+  const re = /\s*([A-Za-z_][\w.]*)\s*\(([^()]*)\)\s*;?/gy;
+  let m, end = 0;
+  while ((m = re.exec(src))) {
+    end = re.lastIndex;
+    const args = {};
+    const argRe = /\s*([A-Za-z_]\w*)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,]+)\s*,?/gy;
+    let a, aEnd = 0;
+    while ((a = argRe.exec(m[2]))) {
+      aEnd = argRe.lastIndex;
+      let v = a[2].trim();
+      if (/^".*"$/.test(v)) v = JSON.parse(v);
+      else if (/^'.*'$/.test(v)) v = v.slice(1, -1);
+      else if (/^(true|false)$/.test(v)) v = v === "true";
+      else if (v !== "" && !isNaN(Number(v))) v = Number(v);
+      args[a[1]] = v;
+    }
+    if (m[2].trim() && aEnd < m[2].length && m[2].slice(aEnd).trim()) throw new Error(`${where}: can't read the arguments "${m[2]}". Use name="value", separated by commas.`);
+    calls.push({ name: m[1], args });
+  }
+  if (src.slice(end).trim()) throw new Error(`${where}: can't read the tool calls "${src}". Use tool(arg="value"); tool2(...)`);
+  return calls;
+}
+function csvToEvalset(text) {
+  const rows = parseCsv(text.replace(/^﻿/, ""));
+  if (rows.length < 2) throw new Error("The CSV has no rows under the header.");
+  const head = rows[0].map((c) => c.trim().toLowerCase());
+  const col = (name) => head.indexOf(name);
+  if (col("eval_id") < 0 || col("user_message") < 0) throw new Error("The CSV needs eval_id and user_message columns - download the template.");
+  const cases = new Map();
+  rows.slice(1).forEach((r, i) => {
+    const get = (name) => (col(name) >= 0 ? (r[col(name)] || "").trim() : "");
+    const id = get("eval_id"), user = get("user_message");
+    if (!id || !user) throw new Error(`Row ${i + 2}: eval_id and user_message are required.`);
+    let c = cases.get(id);
+    if (!c) { c = { eval_id: id, conversation: [], session_input: { app_name: INFO.app_name, user_id: get("user_id") || "eval@test", state: {} } }; cases.set(id, c); }
+    const turn = { user_content: { role: "user", parts: [{ text: user }] },
+      intermediate_data: { tool_uses: parseCalls(get("expected_tools"), `Row ${i + 2}`) } };
+    if (get("expected_answer")) turn.final_response = { role: "model", parts: [{ text: get("expected_answer") }] };
+    c.conversation.push(turn);
+    const rub = get("rubric").split(/\s*\|\s*|\r?\n/).map((x) => x.trim()).filter(Boolean);
+    if (rub.length) c.rubrics = [...(c.rubrics || []), ...rub.map((t, k) => ({ rubric_id: `r${(c.rubrics || []).length + k + 1}`, rubric_content: { text_property: t }, type: RUBRIC_TYPE }))];
+  });
+  return { eval_set_id: SET.eval_set_id, eval_cases: [...cases.values()] };
+}
+
 // ------------------------------------------------------------------ start
 (async () => {
   try {
@@ -745,8 +1217,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#dra
     await loadSets();
     const q = new URLSearchParams(location.search);
     const want = q.get("set") || (SETS[0] && SETS[0].eval_set_id);
-    if (want && SETS.some((s) => s.eval_set_id === want)) await openSet(want, { view: q.get("view") || undefined, run: q.get("run") ? Number(q.get("run")) : undefined });
-    else renderMain();
+    if (want && SETS.some((s) => s.eval_set_id === want)) {
+      await openSet(want, { view: q.get("view") || undefined, run: q.get("run") ? Number(q.get("run")) : undefined });
+      if (q.get("edit")) await openEditor(q.get("edit") === "new" ? null : q.get("edit"));
+      else if (q.get("compare")) await openCompare(q.get("compare").split(",").map(Number));
+    } else renderMain();
     if (q.get("from")) openChatDialog(q.get("from"));
   } catch (e) {
     $("#main").replaceChildren(h("div", { class: "msg err", text: e.message }));

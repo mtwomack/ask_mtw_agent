@@ -52,9 +52,13 @@ METRICS = [
     {"name": "response_match_score", "label": "Answer word match (ROUGE)",
      "help": "Word overlap with the expected answer. Off for live prices - the numbers change.",
      "default": 0.8, "on": False},
+    {"name": "rubric_based_final_response_quality_v1", "label": "Rubric checks (LLM judge)",
+     "help": "Gemini checks the answer against each case's rubric lines (set in the case editor). "
+             "Score = share of lines met.", "default": 0.8, "on": False},
     {"name": "hallucinations_v1", "label": "No hallucinations (LLM judge)",
      "help": "Checks the answer is supported by what the tools returned.", "default": 0.8, "on": False},
 ]
+RUBRIC_TYPE = "FINAL_RESPONSE_QUALITY"   # what rubric_based_final_response_quality_v1 reads
 METRIC_NAMES = {m["name"] for m in METRICS}
 DEFAULT_CRITERIA = {m["name"]: m["default"] for m in METRICS if m["on"]}
 INFO_METRICS = {"tool_call_count_v1", "inference_call_count_v1", "token_usage_v1",
@@ -239,7 +243,8 @@ def _case_summary(row) -> dict:
     data = row["data"]
     turns = data.get("conversation") or []
     first = turns[0] if turns else {}
-    return {"eval_id": row["eval_id"], "turns": len(turns),
+    rubrics = len(data.get("rubrics") or []) + sum(len(t.get("rubrics") or []) for t in turns)
+    return {"eval_id": row["eval_id"], "turns": len(turns), "rubrics": rubrics,
             "user": _text(first.get("user_content")),
             "tools": [c["name"] for t in turns
                       for c in ((t.get("intermediate_data") or {}).get("tool_uses") or [])],
@@ -275,6 +280,63 @@ def _metrics_from(criteria: dict):
 def _model_name(agent) -> str:
     model = getattr(agent, "model", "")
     return str(getattr(model, "model", model) or "")
+
+
+def _schema_params(schema) -> list[dict]:
+    """A tool's parameters (genai Schema) -> [{name, type, required, description}]."""
+    if schema is None:
+        return []
+    props = getattr(schema, "properties", None) or {}
+    required = set(getattr(schema, "required", None) or [])
+    out = []
+    for name, prop in props.items():
+        kind = getattr(prop, "type", None)
+        kind = (getattr(kind, "value", kind) or "string")
+        out.append({"name": name, "type": str(kind).lower(), "required": name in required,
+                    "description": (getattr(prop, "description", "") or "")[:200]})
+    return out
+
+
+async def _agent_tools() -> list[dict]:
+    """The root agent's tools as the model sees them: name, description, parameters.
+    Used by the case editor so expected tool calls use real names and arguments."""
+    from google.adk.tools.base_tool import BaseTool
+    from google.adk.tools.base_toolset import BaseToolset
+    from google.adk.tools.function_tool import FunctionTool
+    root, _ = _load_agent()
+    tools = []
+    for t in getattr(root, "tools", []) or []:
+        try:
+            if isinstance(t, BaseToolset):
+                tools.extend(await t.get_tools())
+            elif isinstance(t, BaseTool):
+                tools.append(t)
+            elif callable(t):
+                tools.append(FunctionTool(t))
+        except Exception as e:                       # noqa: BLE001 - one bad toolset shouldn't hide the rest
+            log.warning("evals: couldn't list tools from %s: %s", t, e)
+    out, seen = [], set()
+    for tool in tools:
+        try:
+            decl = tool._get_declaration()
+        except Exception:
+            decl = None
+        if not decl or decl.name in seen:
+            continue
+        seen.add(decl.name)
+        params = _schema_params(decl.parameters)
+        if not params and getattr(decl, "parameters_json_schema", None):
+            js = decl.parameters_json_schema or {}
+            params = [{"name": k, "type": str((v or {}).get("type", "string")), "required": k in (js.get("required") or []),
+                       "description": str((v or {}).get("description", ""))[:200]}
+                      for k, v in (js.get("properties") or {}).items()]
+        out.append({"name": decl.name, "description": (decl.description or "").strip().split("\n")[0][:200],
+                    "params": params})
+    if getattr(root, "sub_agents", None):
+        out.append({"name": "transfer_to_agent", "description": "Hands the conversation to a sub-agent: "
+                    + ", ".join(a.name for a in root.sub_agents),
+                    "params": [{"name": "agent_name", "type": "string", "required": True, "description": ""}]})
+    return out
 
 
 def _load_agent():
@@ -529,6 +591,34 @@ async def _upsert_case(eval_set_id: str, case: dict) -> bool:
                        returning (xmax = 0) as inserted""",
                     a=APP_NAME, s=eval_set_id, e=case["eval_id"], d=_j(case))
     return bool(rows and rows[0]["inserted"])
+
+
+@router.get("/api/tools")
+async def agent_tools(request: Request):
+    await _admin(request)
+    try:
+        return await _agent_tools()
+    except Exception as e:                           # noqa: BLE001 - the editor still works without the list
+        log.exception("evals: listing tools failed")
+        raise HTTPException(500, f"Couldn't list the agent's tools ({type(e).__name__}: {e}).") from e
+
+
+@router.post("/api/sets/{eval_set_id}/cases")
+async def create_case(eval_set_id: str, request: Request):
+    """A new case from the case editor. 409 if the ID is taken (the editor asks before replacing)."""
+    await _admin(request)
+    await _set_or_404(eval_set_id)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, "A case is a JSON object.")
+    _check_id(body.get("eval_id"), "The case ID")
+    case = _validate_case(body)
+    taken = await _q("select 1 from eval_cases where app_name=:a and eval_set_id=:s and eval_id=:e",
+                     a=APP_NAME, s=eval_set_id, e=case["eval_id"])
+    if taken:
+        raise HTTPException(409, f"There's already a case called {case['eval_id']}.")
+    await _upsert_case(eval_set_id, case)
+    return case
 
 
 @router.put("/api/sets/{eval_set_id}/cases/{eval_id}")

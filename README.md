@@ -114,12 +114,16 @@ An eval set is a list of test conversations - what the user says, which tools th
 and what a good answer looks like - in ADK's `.evalset.json` format. Runs score each case with ADK's
 own evaluators (the same as `adk eval`), and sets and results are kept in Postgres so you can compare runs.
 
-- **Add cases** from a chat (the flask icon next to a chat, or **+ From a chat**), or import an
-  `.evalset.json`. `evals/ponder_basics.evalset.json` is a starter set.
+- **Add cases** with **+ New case** (a form: what the user says, the expected tool calls picked
+  from the agent's real tools, the expected answer, optional rubric lines - with a live JSON
+  preview), from a chat (the flask icon next to a chat, or **+ From a chat**), or by importing an
+  `.evalset.json` or a CSV (template in the Import dialog). **Edit** changes a case in the same
+  form. `evals/ponder_basics.evalset.json` is a starter set.
 - **Run** a set: pick how to score - tool calls must match, an LLM judge (Gemini) checks the answer
-  means the same, or word match. Use the judge for live prices and news; their numbers change.
-- **Results** show pass/fail per case, expected vs actual tool calls and answers, and cases that
-  passed last time but fail now (**Regressed**).
+  means the same, rubric checks, or word match. Use the judge for live prices and news; their numbers change.
+- **Results** show pass/fail per case, expected vs actual tool calls and answers, the judge's
+  reasons, cases that passed last time but fail now (**Regressed**) and a pass-rate trend.
+  **Compare runs** puts two or three runs side by side, case by case.
 - Who: emails in `ADMIN_EMAILS`; everyone when sign-in is off (local). Needs the Postgres session
   store, and the LLM judge needs `GOOGLE_API_KEY`. One run at a time.
 - On Cloud Run, keep the page open while a run goes (its polling keeps the container awake),
